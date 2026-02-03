@@ -1,0 +1,162 @@
+# core/recovery.py — Модуль восстановления CawOS 1.3
+import os
+import shutil
+import time
+import zipfile
+import requests
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, DownloadColumn
+from rich.prompt import Prompt, Confirm
+
+# Пытаемся импортировать clear_screen из main, если не выйдет — создаем свою
+try:
+    from main import clear_screen
+except ImportError:
+    def clear_screen():
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+console = Console()
+
+# --- БЕЗОПАСНЫЙ ИМПОРТ ВЕРСИИ ---
+try:
+    from data.info import info
+    SYSTEM_VERSION = info.version
+except Exception:
+    SYSTEM_VERSION = "1.3-RECOVERY"
+
+# Конфигурация сервера обновлений
+UPDATE_SERVER = "http://cawas.duckdns.org/system.zip"
+
+def menu(reason="Manual entry"):
+    """Главное меню Recovery Mode."""
+    while True:
+        clear_screen()
+        # ИСПРАВЛЕНО: f-строка и использование безопасной переменной SYSTEM_VERSION
+        console.print(Panel(
+            f"[bold red]CawOS RECOVERY MODE[/bold red]\n"
+            f"[yellow]Status:[/yellow] {reason}", 
+            border_style="red",
+            title=f"v {SYSTEM_VERSION} System Maintenance",
+            expand=True
+        ))
+        
+        console.print("1. [bold green]Reboot[/bold green] — Обычная загрузка")
+        console.print("2. [bold cyan]System Repair (OTA)[/bold cyan] — ПОЛНАЯ переустановка ОС по сети")
+        console.print("3. [bold magenta]Wipe Data[/bold magenta] — Сброс настроек (сохраняя приложения)")
+        console.print("4. [bold white]Power Off[/bold white] — Выключить устройство")
+        
+        choice = Prompt.ask("\nВыберите действие", choices=["1", "2", "3", "4"])
+        
+        if choice == "1":
+            return "reboot"
+        
+        elif choice == "2":
+            if run_ota_repair():
+                return "reboot"
+            
+        elif choice == "3":
+            run_wipe_data()
+            
+        elif choice == "4":
+            os._exit(0)
+
+def run_ota_repair():
+    """Сетевое восстановление ВСЕЙ системы."""
+    console.print(Panel(
+        "[bold yellow]ВНИМАНИЕ:[/bold yellow]\n"
+        "Будет произведена полная замена системных файлов (core, main.py, data/info.py).\n"
+        "Ваши файлы в [cyan]data/0[/cyan] и настройки [cyan]data/json[/cyan] затронуты не будут.",
+        title="OTA Repair Info"
+    ))
+    
+    if not Confirm.ask("Начать процесс восстановления?"):
+        return False
+
+    console.print(f"\n[cyan]Подключение к {UPDATE_SERVER}...[/cyan]")
+    
+    try:
+        # 1. Загрузка
+        response = requests.get(UPDATE_SERVER, stream=True, timeout=15)
+        if response.status_code != 200:
+            console.print(f"[bold red]Ошибка:[/bold red] Сервер вернул код {response.status_code}")
+            time.sleep(2)
+            return False
+
+        total_size = int(response.headers.get('content-length', 0))
+        temp_zip = "recovery_cache.zip"
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            DownloadColumn(),
+            transient=True
+        ) as progress:
+            task = progress.add_task("[yellow]Загрузка полного образа...", total=total_size)
+            
+            with open(temp_zip, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                    progress.update(task, advance=len(chunk))
+
+        # 2. Распаковка
+        console.print("[yellow]Распаковка и замена системных компонентов...[/yellow]")
+        
+        # Создаем временную папку для распаковки
+        temp_dir = "temp_extraction"
+        if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir)
+
+        with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+
+        # 3. Установка (Копируем всё из временной папки в корень проекта)
+        # dirs_exist_ok=True позволит перезаписать существующие файлы (main.py, папку core и т.д.)
+        shutil.copytree(temp_dir, ".", dirs_exist_ok=True)
+
+        # Очистка
+        os.remove(temp_zip)
+        shutil.rmtree(temp_dir)
+
+        console.print("[bold green]✓ Система CawOS успешно переустановлена![/bold green]")
+        input("\nНажмите Enter для перезагрузки...")
+        return True
+
+    except Exception as e:
+        console.print(f"[bold red]Критическая ошибка восстановления:[/bold red] {e}")
+        input("\nНажмите Enter...")
+        return False
+
+def run_wipe_data():
+    """Сброс пользовательских данных."""
+    console.print("\n[bold red]ВНИМАНИЕ: Все настройки и файлы в data/0 будут удалены![/bold red]")
+    if Confirm.ask("Выполнить Wipe Data (Factory Reset)?", default=False):
+        # 1. Сброс JSON настроек (пароли, конфиги)
+        json_dir = os.path.join("data", "json")
+        if os.path.exists(json_dir):
+            shutil.rmtree(json_dir)
+            os.makedirs(json_dir)
+            console.print("[green]✓[/green] Системные конфиги сброшены.")
+
+        # 2. Очистка пользовательской папки
+        user_dir = os.path.join("data", "0")
+        if os.path.exists(user_dir):
+            for item in os.listdir(user_dir):
+                # Пропускаем папку приложений (app) по твоему запросу
+                if item == "app":
+                    continue
+                
+                item_path = os.path.join(user_dir, item)
+                try:
+                    if os.path.isfile(item_path) or os.path.islink(item_path):
+                        os.unlink(item_path)
+                    else:
+                        shutil.rmtree(item_path)
+                except Exception as e:
+                    console.print(f"[dim red]Не удалось удалить {item}: {e}[/dim red]")
+            
+            console.print("[green]✓[/green] Пользовательские данные очищены (кроме приложений).")
+        
+        input("\nСброс завершен. Нажмите Enter для перезагрузки...")
+        clear_screen()

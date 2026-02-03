@@ -1,0 +1,8 @@
+{
+    "username": "user",
+    "verify_enabled": true,
+    "secury_enabled": true,
+    "oem_unlock": true,
+    "allow_root": true,
+    "root_password_hash": "429711e69fb731f0b06907059c076294ea19916e444961261423f7ba69a747fb"
+}
