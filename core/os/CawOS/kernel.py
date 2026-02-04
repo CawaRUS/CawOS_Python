@@ -24,6 +24,8 @@ class Kernel:
         self.init_system()
         self.log_shell_start() 
         result = shell.run(self)
+
+        self.shutdown()
         
         return result
 

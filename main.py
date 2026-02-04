@@ -166,7 +166,6 @@ if __name__ == "__main__":
                 if exit_code == "reboot":
                     console.print("\n[blue][BOOT][/blue] [green]Выполняется мягкая перезагрузка...[/green]")
                     time.sleep(1)
-                    # Мы не выходим из цикла while True, поэтому он просто начнется сначала
                     continue 
 
                 elif exit_code == "shutdown":
