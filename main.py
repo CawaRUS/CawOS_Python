@@ -159,13 +159,26 @@ if __name__ == "__main__":
                 kernel_instance = KernelClass(os_name=os_name)
                 
                 # --- ТОЧКА ЗАПУСКА ЯДРА ---
-                kernel_instance.start() 
+                # Теперь мы ожидаем результат работы ядра
+                exit_code = kernel_instance.start() 
                 # -------------------------
                 
-                # Если ядро штатно завершило работу
-                console.print("\n[blue][BOOT][/blue] [yellow]Завершение работы системы...[/yellow]")
-                time.sleep(1)
-                os._exit(0)
+                if exit_code == "reboot":
+                    console.print("\n[blue][BOOT][/blue] [green]Выполняется мягкая перезагрузка...[/green]")
+                    time.sleep(1)
+                    # Мы не выходим из цикла while True, поэтому он просто начнется сначала
+                    continue 
+
+                elif exit_code == "shutdown":
+                    console.print("\n[blue][BOOT][/blue] [yellow]Завершение работы системы...[/yellow]")
+                    time.sleep(1)
+                    os._exit(0)
+
+                else:
+                    # Если ядро просто "вылетело" без кода или вернуло None
+                    # Это может быть багом, лучше отправить в Recovery
+                    start_recovery("Kernel terminated unexpectedly without exit code.")
+                    continue
 
             except Exception as e:
                 # Обработка Kernel Panic

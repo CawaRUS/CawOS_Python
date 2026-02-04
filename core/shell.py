@@ -56,9 +56,9 @@ def run(kernel_instance):
 
         command = cmd[0].lower()
 
-        if command == "exit":
+        if command in ("exit", "shutdown"):
             if Confirm.ask("[yellow]Вы уверены, что хотите выключить ОС?[/yellow]"):
-                kernel_instance.shutdown()
+                return "shutdown"
 
         elif command == "clear":
             clear()
@@ -71,7 +71,7 @@ def run(kernel_instance):
             # --- РЕФАКТОРИНГ UI ---
             commands_list = [
                 ("help", "Показать это сообщение"),
-                ("exit", "Выключить ОС"),
+                ("exit / shutdown", "Выключить ОС"),
                 ("clear", "Очистить экран"),
                 ("ls", "Показать содержимое каталога"),
                 ("cd <папка>", "Сменить каталог (.. назад, \\ в корень)"),
@@ -105,23 +105,20 @@ def run(kernel_instance):
             os.makedirs(os.path.dirname(boot_mode_path), exist_ok=True)
 
             if len(args) == 1:
-                print("[SYSTEM] Перезагрузка системы...")
                 with open(boot_mode_path, "w") as f:
                     json.dump({"mode": "normal"}, f)
-                os._exit(0)
+                return "reboot"
 
             # Используем args[1], так как args[0] это само слово 'reboot'
             elif args[1] in ["bootloader", "fastboot"]:
-                print("[SYSTEM] Перезагрузка в режим загрузчика (FASTBOOT)...")
                 with open(boot_mode_path, "w") as f:
                     json.dump({"mode": "fastboot"}, f)
-                os._exit(0)
+                return "reboot"
 
             elif args[1] == "recovery":
-                print("[SYSTEM] Перезагрузка в режим восстановления (RECOVERY)...")
                 with open(boot_mode_path, "w") as f:
                     json.dump({"mode": "recovery"}, f)
-                os._exit(0)
+                return "reboot"
 
             else:
                 print(f"[ERROR] Неизвестный параметр перезагрузки: {args[1]}")
@@ -230,10 +227,6 @@ def run(kernel_instance):
                 continue
             target = cmd[1]
             
-            # --- УЛУЧШЕНИЕ ЛОГИКИ ---
-            # Передаем 'root_mode' в secury, как и обсуждали.
-            # (Это потребует от вас изменить secury.confirm_delete,
-            # чтобы он принимал 2 аргумента: 'path' и 'is_root')
             if not secury.confirm_delete(target, kernel_instance.root_mode):
                 continue
             # ------------------------

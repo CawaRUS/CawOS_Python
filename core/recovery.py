@@ -23,7 +23,7 @@ try:
     from data.info import info
     SYSTEM_VERSION = info.version
 except Exception:
-    SYSTEM_VERSION = "1.3-RECOVERY"
+    SYSTEM_VERSION = "NULL"
 
 # Конфигурация сервера обновлений
 UPDATE_SERVER = "http://cawas.duckdns.org/system.zip"

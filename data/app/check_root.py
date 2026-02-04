@@ -14,5 +14,5 @@ def check_root():
     else:
         print("У вас нет root прав.")
 
-# ВЫЗЫВАЕМ НАПРЯМУЮ, БЕЗ if __name__ == "__main__"
+
 check_root()

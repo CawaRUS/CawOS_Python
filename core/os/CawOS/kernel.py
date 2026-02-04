@@ -20,10 +20,12 @@ class Kernel:
 
     # --- МЕТОД ЗАПУСКА (теперь внутри класса) ---
     def start(self):
-        """Основная точка входа для запуска ядра."""
         print(Fore.GREEN + "[KERNEL] Ядро запущено" + Style.RESET_ALL)
         self.init_system()
-        self.run_shell()
+        self.log_shell_start() 
+        result = shell.run(self)
+        
+        return result
 
     def enter_root_mode(self):
         self.root_mode = True
@@ -36,9 +38,8 @@ class Kernel:
     def init_system(self):
         print(Fore.GREEN + "[KERNEL] Инициализация системных модулей..." + Style.RESET_ALL)
         
-    def run_shell(self):
+    def log_shell_start(self):
         print(Fore.GREEN + "[KERNEL] Запуск оболочки CawOS." + Style.RESET_ALL)
-        shell.run(self) 
         
     def shutdown(self):
         info.set_exit_on(1)
