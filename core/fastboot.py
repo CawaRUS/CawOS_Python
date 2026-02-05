@@ -15,6 +15,40 @@ class FastbootInterface:
             "system": "core/"
         }
 
+    def formating(self):
+        json_dir = os.path.join("data", "json")
+        if os.path.exists(json_dir):
+            shutil.rmtree(json_dir)
+        os.makedirs(json_dir)
+
+        # 2. Очистка и восстановление data/0
+        user_dir = os.path.join("data", "0")
+        if not os.path.exists(user_dir):
+            os.makedirs(user_dir)
+
+        # Список обязательных папок, которые должны быть в системе
+        required_dirs = ["app", "download", "documents", "photos", "music"]
+
+        # Удаляем старое содержимое
+        for item in os.listdir(user_dir):
+            if item == "app": # Твоё условие: приложения плебеев не трогаем
+                continue
+            
+            item_path = os.path.join(user_dir, item)
+            try:
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
+                else:
+                    shutil.rmtree(item_path)
+            except Exception as e:
+                pass
+
+        # Создаем чистую структуру
+        for folder in required_dirs:
+            path = os.path.join(user_dir, folder)
+            if not os.path.exists(path):
+                os.makedirs(path)
+
     def set_boot_mode(self, mode):
         os.makedirs(os.path.dirname(self.boot_mode_path), exist_ok=True)
         with open(self.boot_mode_path, "w") as f:
@@ -48,7 +82,7 @@ class FastbootInterface:
                 confirm = input(f"Enter password ({hwid}): ")
                 if confirm == hwid[::-1]:
                     print("[OK] Password verified. Formatting /data...")
-                    shutil.rmtree("data/0", ignore_errors=True)
+                    self.formating()
                     os.makedirs("data/0", exist_ok=True)
                     data = auth.load_settings()
                     data["oem_unlock"] = True

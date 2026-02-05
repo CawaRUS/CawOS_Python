@@ -1,84 +1,79 @@
-# boot.py — загрузчик ОС с выбором
-
+# boot.py — загрузчик ОС с соблюдением пользовательских настроек
 import os
 import json
 
-# Для rich
 try:
     from rich.console import Console
     console = Console()
 except ImportError:
-    # Заглушка, если rich не установлен
     class MockConsole:
-        def print(self, *args, **kwargs):
-            print(*args)
+        def print(self, *args, **kwargs): print(*args)
     console = MockConsole()
 
 info_path = os.path.join("data", "json", "info.json")
 
 def read_info():
-    """Читает общий конфигурационный файл info.json."""
+    """Чтение конфига. Если файла нет или он битый — multi_os_boot будет False."""
+    if not os.path.exists(info_path):
+        return {}
     try:
         with open(info_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except:
         return {}
-    
+
 def choose_os():
-    """Предлагает пользователю выбрать ОС, если включена опция multi_os_boot."""
+    """Меню выбора ОС."""
     os_path = os.path.join("core", "os")
     if not os.path.exists(os_path):
-        console.print("[blue][BOOT][/blue] Папка с ОС не найдена.")
         return "CawOS"
 
     systems = [d for d in os.listdir(os_path) if os.path.isdir(os.path.join(os_path, d))]
     if not systems:
-        console.print("[blue][BOOT][/blue] Не найдено ни одной ОС.")
         return "CawOS"
+    
+    display_systems = systems + ["RECOVERY"]
 
-    console.print("\n[bold]=== Меню загрузки ОС ===[/bold]")
-    for i, s in enumerate(systems, 1):
-        console.print(f"{i}. {s}")
+    console.print("\n[bold cyan]─── CawOS Boot Manager ───[/bold cyan]")
+    for i, s in enumerate(display_systems, 1):
+        color = "green" if s == "CawOS" else "white"
+        if s == "RECOVERY": color = "red"
+        console.print(f" {i} > [{color}]{s}[/{color}]")
 
     while True:
-        choice = input("Выберите ОС (по номеру): ").strip()
-        if choice.isdigit() and 1 <= int(choice) <= len(systems):
-            return systems[int(choice) - 1]
-        console.print("[red]Неверный ввод.[/red]")
+        try:
+            choice = input("\nbooting > ").strip()
+            if not choice: continue
+            idx = int(choice) - 1
+            if 0 <= idx < len(display_systems):
+                return display_systems[idx]
+        except ValueError:
+            pass
+        console.print("[red]Используйте номер из списка.[/red]")
 
 def main():
-    """Основная функция загрузки."""
-    console.print("[blue][BOOT][/blue] Загрузка...")
-    # ИСПРАВЛЕНИЕ NameError: read_info() теперь доступна
-    info = read_info()
-    allow_choice = info.get("multi_os_boot", False)
+    """Определяет ОС строго по инструкции из info.json."""
+    console.print("[blue][BOOT][/blue] Инициализация...")
     
+    info = read_info()
+    os_path = os.path.join("core", "os")
+    
+    # СТРОГОЕ СОБЛЮДЕНИЕ ПУНКТА 8:
+    # Берем значение из конфига. Если его нет — по умолчанию False (ВЫКЛ).
+    allow_choice = info.get("multi_os_boot", False)
+
     if allow_choice:
         os_name = choose_os()
     else:
-        os_name = "CawOS" # ОС по умолчанию
-        console.print(f"[blue][BOOT][/blue] Загружаем [bold green]{os_name}[/bold green]...")
+        # Прямая загрузка без лишних вопросов
+        # Если CawOS нет (стерли?), берем первую попавшуюся папку из os/
+        if os.path.exists(os_path):
+            installed = [d for d in os.listdir(os_path) if os.path.isdir(os.path.join(os_path, d))]
+            os_name = "CawOS" if "CawOS" in installed else (installed[0] if installed else "CawOS")
+        else:
+            os_name = "CawOS"
+            
+        console.print(f"[blue][BOOT][/blue] Авто-запуск: [bold green]{os_name}[/bold green]...")
 
-    # Формируем путь к модулю ядра динамически
-    kernel_path = f"core.os.{os_name}.kernel"
-
-    try:
-        # Динамический импорт модуля ядра
-        kernel_module = __import__(kernel_path, fromlist=["*"])
-        
-        # Вызываем функцию start в модуле ядра, передавая ей имя ОС
-        # Эта функция должна создать и запустить экземпляр класса Kernel
-        try:
-            kernel_module.start(os_name)
-        except Exception:
-            pass
-        
-        return os_name
-        
-    except ModuleNotFoundError:
-        console.print(f"[blue][BOOT][/blue] [bold red]Ошибка: kernel для {os_name} не найден. Проверьте путь: {kernel_path}[/bold red]")
-        exit(1)
-    except AttributeError:
-        # Теперь это отлавливает ошибку, если в kernel.py нет функции start(os_name)
-        console.print(f"[blue][BOOT][/blue] [bold red]Ошибка: в модуле kernel.py для {os_name} отсутствует функция start(os_name) или она не определена корректно.[/bold red]")
-        exit(1)
+    return os_name

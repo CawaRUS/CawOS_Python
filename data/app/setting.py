@@ -1,114 +1,107 @@
-# settings.py — системное приложение "Настройки"
-import json
 import os
+import json
+import getpass
+import time
 from datetime import datetime
-from core import auth  # новый модуль
 
-info_path = os.path.join("data", "json", "info.json")
-apps_path = os.path.join("data", "app")
+# Библиотеки Rich для красоты
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich import print as rprint
 
-def read_info():
-    try:
-        with open(info_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
+from core import auth
 
-def write_info(data):
-    os.makedirs(os.path.dirname(info_path), exist_ok=True)
-    with open(info_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+console = Console()
 
-def show_menu():
-    print("\n=== Настройки ===")
-    print("1. Показать текущее время")
-    print("2. Изменить имя пользователя")
-    print("3. Список приложений")
-    print("4. Вкл/Выкл проверку целостности (verify.py)")
-    print("5. Вкл/Выкл модуль безопасности (secury.py)")
-    print("6. Разрешить/запретить получение ROOT")
-    print("7. Установить/сменить пароль ROOT")
-    print("8. Включить выбор ОС")
-    print("0. Выход")
+def get_status_style(value: bool) -> str:
+    return "[bold green]ВКЛ[/]" if value else "[bold red]ВЫКЛ[/]"
 
-# инициализация info.json (не затираем существующие поля)
-info = read_info()
-changed = False
-if "username" not in info:
-    info["username"] = "user"; changed = True
-if "verify_enabled" not in info:
-    info["verify_enabled"] = True; changed = True
-if "secury_enabled" not in info:
-    info["secury_enabled"] = True; changed = True
-if changed:
-    write_info(info)
+def show_menu(info):
+    table = Table(title="Системные Настройки", title_style="bold magenta", expand=True)
+    table.add_column("ID", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Опция", style="white")
+    table.add_column("Статус / Значение", justify="right")
 
+    table.add_row("1", "Текущее время", datetime.now().strftime('%H:%M:%S'))
+    table.add_row("2", "Имя пользователя", f"[yellow]{info.get('username', 'user')}[/]")
+    table.add_row("3", "Список приложений", f"{len(os.listdir('data/app')) if os.path.exists('data/app') else 0} шт.")
+    table.add_row("4", "Проверка целостности", get_status_style(info.get("verify_enabled", True)))
+    table.add_row("5", "Модуль безопасности", get_status_style(info.get("secury_enabled", True)))
+    table.add_row("6", "Доступ к ROOT", "[bold yellow]ОГРАНИЧЕНО[/]" if not info.get("oem_unlock") else get_status_style(info.get("allow_root")))
+    table.add_row("7", "Управление паролем ROOT", "[dim]********[/]")
+    table.add_row("8", "Выбор нескольких ОС", get_status_style(info.get("multi_os_boot", False)))
+    table.add_row("0", "[bold red]Выход[/]", "")
+
+    console.print(table)
+
+# Основной цикл
 while True:
-    show_menu()
-    choice = input("Выберите опцию: ").strip()
+    # Обновляем данные из файла каждый раз, чтобы видеть изменения других модулей
+    info = auth.load_settings() 
+    show_menu(info)
+    
+    choice = console.input("[bold cyan]Введите номер опции > [/]").strip()
 
     if choice == "1":
-        print(f"Текущее время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        rprint(f"[bold green]Дата и время:[/] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     elif choice == "2":
         new_name = input("Введите новое имя пользователя: ").strip()
         if new_name:
             info["username"] = new_name
-            write_info(info)
-            print(f"Имя пользователя изменено на: {new_name}")
-        else:
-            print("Имя не изменено.")
+            auth.save_settings(info)
+            rprint(f"[green]✔ Имя изменено на {new_name}[/]")
 
     elif choice == "3":
-        print("Установленные приложения:")
+        apps_path = "data/app"
         if os.path.exists(apps_path):
-            for a in os.listdir(apps_path):
-                if a.endswith(".py"):
-                    print(" - " + a[:-3])
+            rprint(Panel("\n".join([f"{a[:-3]}" for a in os.listdir(apps_path) if a.endswith(".py")]), title="Установленное ПО"))
         else:
-            print("Папка с приложениями не найдена.")
+            rprint("[red]Ошибка: Папка приложений не найдена[/]")
 
-    elif choice == "4":
-        info["verify_enabled"] = not info.get("verify_enabled", True)
-        write_info(info)
-        print(f"Проверка целостности: {'Включена' if info['verify_enabled'] else 'Отключена'}")
-
-    elif choice == "5":
-        info["secury_enabled"] = not info.get("secury_enabled", True)
-        write_info(info)
-        print(f"Модуль безопасности: {'Включён' if info['secury_enabled'] else 'Отключён'}")
+    elif choice in ["4", "5", "8"]:
+        # Групповая обработка простых переключателей
+        keys = {"4": "verify_enabled", "5": "secury_enabled", "8": "multi_os_boot"}
+        key = keys[choice]
+        info[key] = not info.get(key, True)
+        auth.save_settings(info)
+        rprint(f"[yellow]Параметр {key} изменен.[/]")
 
     elif choice == "6":
-        # Проверяем, разрешил ли Fastboot разблокировку
-        info = read_info()
         if not info.get("oem_unlock", False):
-            print("\n[ОШИБКА] Доступ заблокирован на уровне загрузчика!")
+            rprint("[bold red]КРИТИЧЕСКАЯ ОШИБКА: OEM_UNLOCK заблокирован. ROOT невозможен.[/]")
         else:
-            # Если в Fastboot всё разрешено, работаем как обычно
             new_val = not auth.is_root_allowed()
             auth.set_root_allowed(new_val)
-            print(f"Получение ROOT теперь: {'РАЗРЕШЕНО' if new_val else 'ЗАПРЕЩЕНО'}")
+            rprint(f"Статус ROOT: {get_status_style(new_val)}")
 
     elif choice == "7":
-        p1 = input("Придумайте пароль для ROOT: ")
-        p2 = input("Повторите пароль: ")
+        # БЕЗОПАСНОСТЬ: Используем getpass, чтобы пароль не отображался при вводе
+        if auth.has_root_password():
+            old_p = getpass.getpass("Введите текущий пароль ROOT: ")
+            if not auth.verify_root_password(old_p):
+                rprint("[bold red]ОШИБКА: Доступ запрещен. Неверный пароль![/]")
+                time.sleep(1) # Защита от брутфорса
+                continue
+        
+        rprint("[blue]Режим смены пароля активирован.[/]")
+        p1 = getpass.getpass("Новый пароль: ")
         if not p1:
-            print("Пароль пустой. Отмена.")
-        elif p1 != p2:
-            print("Пароли не совпадают.")
-        else:
+            rprint("[red]Отмена: Пароль не может быть пустым.[/]")
+            continue
+            
+        p2 = getpass.getpass("Повторите пароль: ")
+        
+        if p1 == p2:
             auth.set_root_password(p1)
-            print("Пароль ROOT установлен/обновлён.")
-
-    elif choice == "8":
-        info["multi_os_boot"] = not info.get("multi_os_boot", False)
-        write_info(info)
-        print(f"Выбор ОС при старте: {'Включён' if info['multi_os_boot'] else 'Отключён'}")
-
+            rprint("[bold green]Пароль ROOT успешно обновлён и хэширован.[/]")
+        else:
+            rprint("[bold red]Ошибка: Пароли не совпадают.[/]")
 
     elif choice == "0":
-        print("Выход из настроек.")
+        rprint("[bold yellow]Завершение сеанса настроек...[/]")
         break
-
-    else:
-        print("Неверная опция.")
+    
+    time.sleep(1.5)
+    os.system('cls' if os.name == 'nt' else 'clear') # Очистка экрана для красоты

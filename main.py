@@ -3,15 +3,22 @@ import os
 import time
 import sys
 
-# --- Импорты Rich ---
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress
-# --------------------
+# --- Ультра-ранняя защита импорта Rich ---
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    console = Console()
+except ImportError:
+    # Если Rich поврежден, создаем заглушку, чтобы система не падала
+    class FakeConsole:
+        def print(self, text, **kwargs): print(str(text))
+    console = FakeConsole()
 
-console = Console()
+# Счетчик для предотвращения бесконечного цикла ошибок
+PANIC_COUNT = 0
+MAX_PANIC = 3
 
-# Список критически важных файлов для работы системы
+# Список критически важных файлов
 REQUIRED_FILES = [
     'core/boot.py',
     'core/verify.py',
@@ -20,105 +27,118 @@ REQUIRED_FILES = [
 ]
 
 def get_boot_mode():
+    """Безопасное получение режима загрузки."""
     mode_file = os.path.join("data", "json", "boot_mode.json")
     if os.path.exists(mode_file):
         try:
             import json
             with open(mode_file, "r") as f:
                 data = json.load(f)
-                return data.get("mode", "normal")
+                # Проверка, что данные — словарь, и извлечение мода
+                return data.get("mode", "normal") if isinstance(data, dict) else "normal"
         except:
             return "normal"
     return "normal"
 
 def set_boot_mode(mode):
-    mode_file = os.path.join("data", "json", "boot_mode.json")
-    import json
-    os.makedirs(os.path.dirname(mode_file), exist_ok=True)
-    with open(mode_file, "w") as f:
-        json.dump({"mode": mode}, f)
+    """Безопасная установка режима загрузки."""
+    try:
+        mode_file = os.path.join("data", "json", "boot_mode.json")
+        import json
+        os.makedirs(os.path.dirname(mode_file), exist_ok=True)
+        with open(mode_file, "w") as f:
+            json.dump({"mode": mode}, f)
+    except:
+        pass # Если не удалось сохранить мод, просто игнорируем
 
 def clear_screen():
-    """Очистка консоли."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def apply_updates():
-    """Проверяет наличие флага обновления и распаковывает его."""
+    """Распаковка обновлений с защитой."""
     flag_file = "update_pending.flag"
     package_file = "update_package.zip"
 
     if os.path.exists(flag_file) and os.path.exists(package_file):
-        console.print(Panel("[bold yellow]INSTALLING UPDATE[/bold yellow]\nПожалуйста, не выключайте систему...", border_style="yellow"))
+        console.print(Panel("[bold yellow]INSTALLING UPDATE[/bold yellow]\nПожалуйста, не выключайте устройство...", border_style="yellow"))
         try:
             import zipfile
             with zipfile.ZipFile(package_file, 'r') as zip_ref:
-                # Распаковка всего содержимого архива в корень проекта
                 zip_ref.extractall(".")
             
-            # Удаление временных файлов
             os.remove(flag_file)
             os.remove(package_file)
             
             console.print("[bold green]Обновление установлено успешно![/bold green]")
             time.sleep(1.5)
-            return True # Сообщаем, что нужно перезапустить процесс
+            return True 
         except Exception as e:
-            console.print(f"[bold red]Критическая ошибка при установке:[/bold red] {e}")
+            console.print(f"[bold red]Ошибка обновления:[/bold red] {e}")
             time.sleep(5)
     return False
 
-
 def verify_system():
-    """Проверка наличия файлов. Возвращает список отсутствующих."""
     return [f for f in REQUIRED_FILES if not os.path.exists(f)]
 
 def start_recovery(reason="Unknown Error"):
-    """Запуск режима восстановления."""
+    """Запуск Recovery с защитой от циклической паники."""
+    global PANIC_COUNT
+    PANIC_COUNT += 1
+    
+    if PANIC_COUNT > MAX_PANIC:
+        clear_screen()
+        print("!!! CRITICAL SYSTEM FAILURE !!!")
+        print(f"Panic loop detected. Last error: {reason}")
+        print("System halted to prevent hardware damage.")
+        os._exit(1)
+
     try:
+        # Динамический импорт recovery
         from core import recovery
-        # Передаем причину падения в меню восстановления
         action = recovery.menu(reason)
         if action == "reboot":
-            return True # Флаг для перезапуска цикла загрузки
-        os._exit(0) # Если выбрали выход/выключение
-    except ImportError:
-        console.print("[bold white on red] FATAL ERROR: Recovery module not found! [/bold white on red]")
-        os._exit(1)
+            return True
+        os._exit(0)
     except Exception as e:
-        console.print(f"[red]Recovery Error: {e}[/red]")
+        console.print(f"[bold white on red] FATAL: Recovery failed: {e} [/bold white on red]")
+        time.sleep(5)
         os._exit(1)
 
 if __name__ == "__main__":
-    while True: # Глобальный цикл для поддержки функции Reboot
+    while True:
         try:
             clear_screen()
             
             # 1. Базовая проверка файлов
             missing = verify_system()
             if missing:
-                files_str = "\n".join([f"[red]- {f}[/red]" for f in missing])
+                files_str = "\n".join([f"- {f}" for f in missing])
                 start_recovery(f"Missing files:\n{files_str}")
                 continue 
 
             mode = get_boot_mode()
+            
+            # Если вошли в спец. режимы, сбрасываем счетчик паник
+            if mode != "normal":
+                PANIC_COUNT = 0
+
             if mode == "fastboot":
-                # Сбрасываем режим на нормальный, чтобы после фастбута зайти в ОС
                 set_boot_mode("normal") 
                 try:
                     from core.fastboot import FastbootInterface
                     fb = FastbootInterface()
-                    fb.run() # Запускаем интерфейс фастбута
-                    continue # После выхода из фастбута возвращаемся в начало цикла
+                    fb.run()
+                    continue 
                 except Exception as e:
                     start_recovery(f"Fastboot Error: {e}")
                     continue
+
             elif mode == "recovery":
-                set_boot_mode("normal") # Сброс для следующего старта
-                # Прямой вызов recovery через наш обработчик
-                start_recovery("Manual Recovery Entry (User Request)")
+                set_boot_mode("normal")
+                start_recovery("Manual Recovery Entry")
                 continue
 
-            # 2. Проверка целостности (core/verify.py)
+            # 2. Проверка целостности
             try:
                 from core.verify import verify_system_integrity
                 if not verify_system_integrity():
@@ -128,7 +148,7 @@ if __name__ == "__main__":
                 start_recovery(f"Integrity Module Error: {e}")
                 continue
 
-            # 3. Блокировка безопасности (core/secury.py)
+            # 3. Безопасность
             try:
                 from core.secury import sec_block
                 sec_block()
@@ -136,10 +156,12 @@ if __name__ == "__main__":
                 start_recovery(f"Security Module Error: {e}")
                 continue
 
+            # Обновления
             if apply_updates():
+                # Полный перезапуск процесса Python
                 os.execv(sys.executable, ['python'] + sys.argv)
 
-            # 4. Запуск загрузчика и выбор ОС (core/boot.py)
+            # 4. Bootloader
             try:
                 from core.boot import main as boot_main
                 os_name = boot_main()
@@ -150,45 +172,39 @@ if __name__ == "__main__":
                 start_recovery(f"Bootloader Error: {e}")
                 continue
 
-            # 5. Динамическая загрузка и запуск ядра
+            # 5. Запуск ядра
             kernel_path = f"core.os.{os_name}.kernel"
             try:
+                # Очищаем кэш импорта, чтобы загрузить свежее ядро (если оно обновилось)
+                if kernel_path in sys.modules:
+                    del sys.modules[kernel_path]
+                
                 module = __import__(kernel_path, fromlist=["Kernel"])
                 KernelClass = getattr(module, "Kernel")
-                
                 kernel_instance = KernelClass(os_name=os_name)
                 
-                # --- ТОЧКА ЗАПУСКА ЯДРА ---
-                # Теперь мы ожидаем результат работы ядра
+                # При успешном доходе до ядра — сбрасываем счетчик паник
+                PANIC_COUNT = 0
+                
                 exit_code = kernel_instance.start() 
-                # -------------------------
                 
                 if exit_code == "reboot":
-                    console.print("\n[blue][BOOT][/blue] [green]Выполняется мягкая перезагрузка...[/green]")
+                    console.print("\n[blue][BOOT][/blue] [green]Rebooting...[/green]")
                     time.sleep(1)
                     continue 
-
                 elif exit_code == "shutdown":
-                    console.print("\n[blue][BOOT][/blue] [yellow]Завершение работы системы...[/yellow]")
-                    time.sleep(1)
                     os._exit(0)
-
                 else:
-                    # Если ядро просто "вылетело" без кода или вернуло None
-                    # Это может быть багом, лучше отправить в Recovery
-                    start_recovery("Kernel terminated unexpectedly without exit code.")
+                    start_recovery("Kernel exit without code.")
                     continue
 
             except Exception as e:
-                # Обработка Kernel Panic
-                start_recovery(f"Kernel Panic / Crash\nDetails: {e}")
+                start_recovery(f"Kernel Panic: {e}")
                 continue
 
         except KeyboardInterrupt:
-            # Перехват Ctrl+C на любом этапе загрузки или работы
             clear_screen()
-            console.print(Panel("[bold yellow]ВНИМАНИЕ: Обнаружено принудительное прерывание (Ctrl+C).[/bold yellow]", border_style="yellow"))
-            if start_recovery("User Interruption"):
+            if start_recovery("User Interruption (Ctrl+C)"):
                 continue
             else:
                 os._exit(0)

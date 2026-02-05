@@ -10,6 +10,9 @@ import data.info as info
 console = Console()
 VERSION_URL = "http://cawas.duckdns.org/version.json"
 
+def reboot():
+    return "reboot"
+
 def calculate_sha256(file_path):
     """Вычисляет SHA-256 хеш файла."""
     sha256_hash = hashlib.sha256()
@@ -84,7 +87,7 @@ try:
             console.print("\n[bold green]Пакет загружен и проверен.[/bold green] Система будет обновлена при перезагрузке.")
             if console.input("Перезагрузить CawOS сейчас? (y/n): ").lower() == 'y':
                 info.set_exit_on(1)
-                os._exit(1) 
+                reboot()
     else:
         console.print("[green]У вас установлена актуальная версия.[/green]")
 

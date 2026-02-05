@@ -129,34 +129,45 @@ def run_ota_repair():
         return False
 
 def run_wipe_data():
-    """Сброс пользовательских данных."""
-    console.print("\n[bold red]ВНИМАНИЕ: Все настройки и файлы в data/0 будут удалены![/bold red]")
+    """Сброс пользовательских данных с восстановлением структуры."""
+    console.print("\n[bold red]ВНИМАНИЕ: Все настройки и личные файлы будут удалены![/bold red]")
     if Confirm.ask("Выполнить Wipe Data (Factory Reset)?", default=False):
-        # 1. Сброс JSON настроек (пароли, конфиги)
+        # 1. Сброс JSON настроек
         json_dir = os.path.join("data", "json")
         if os.path.exists(json_dir):
             shutil.rmtree(json_dir)
-            os.makedirs(json_dir)
-            console.print("[green]✓[/green] Системные конфиги сброшены.")
+        os.makedirs(json_dir)
+        console.print("[green]✓[/green] Системные конфиги сброшены.")
 
-        # 2. Очистка пользовательской папки
+        # 2. Очистка и восстановление data/0
         user_dir = os.path.join("data", "0")
-        if os.path.exists(user_dir):
-            for item in os.listdir(user_dir):
-                # Пропускаем папку приложений (app) по твоему запросу
-                if item == "app":
-                    continue
-                
-                item_path = os.path.join(user_dir, item)
-                try:
-                    if os.path.isfile(item_path) or os.path.islink(item_path):
-                        os.unlink(item_path)
-                    else:
-                        shutil.rmtree(item_path)
-                except Exception as e:
-                    console.print(f"[dim red]Не удалось удалить {item}: {e}[/dim red]")
+        if not os.path.exists(user_dir):
+            os.makedirs(user_dir)
+
+        # Список обязательных папок, которые должны быть в системе
+        required_dirs = ["app", "download", "documents", "photos", "music"]
+
+        # Удаляем старое содержимое
+        for item in os.listdir(user_dir):
+            if item == "app": # Твоё условие: приложения плебеев не трогаем
+                continue
             
-            console.print("[green]✓[/green] Пользовательские данные очищены (кроме приложений).")
+            item_path = os.path.join(user_dir, item)
+            try:
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
+                else:
+                    shutil.rmtree(item_path)
+            except Exception as e:
+                console.print(f"[dim red]Ошибка очистки {item}: {e}[/dim red]")
+
+        # Создаем чистую структуру
+        for folder in required_dirs:
+            path = os.path.join(user_dir, folder)
+            if not os.path.exists(path):
+                os.makedirs(path)
         
-        input("\nСброс завершен. Нажмите Enter для перезагрузки...")
+        console.print("[green]✓[/green] Структура папок [cyan]data/0[/cyan] восстановлена.")
+        
+        input("\nСброс завершен успешно. Нажмите Enter для перезагрузки...")
         clear_screen()
