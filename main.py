@@ -2,6 +2,7 @@
 import os
 import time
 import sys
+sys.dont_write_bytecode = True
 
 # --- Ультра-ранняя защита импорта Rich ---
 try:
@@ -54,26 +55,58 @@ def set_boot_mode(mode):
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+import shutil
+
 def apply_updates():
-    """Распаковка обновлений с защитой."""
     flag_file = "update_pending.flag"
     package_file = "update_package.zip"
 
     if os.path.exists(flag_file) and os.path.exists(package_file):
-        console.print(Panel("[bold yellow]INSTALLING UPDATE[/bold yellow]\nПожалуйста, не выключайте устройство...", border_style="yellow"))
+        console.print(Panel("[bold yellow]INSTALLING UPDATE[/bold yellow]"))
         try:
             import zipfile
+            import shutil
+            import sys
+
+            # 1. Тотальная зачистка кэша импортов (сразу, чтобы не было конфликтов)
+            for module in list(sys.modules.keys()):
+                if module.startswith(('core', 'data')):
+                    del sys.modules[module]
+
+            # 2. Очистка старых папок и ВСЕХ __pycache__ перед распаковкой
+            for path in ["data/app", "data/0/app"]:
+                if os.path.exists(path):
+                    shutil.rmtree(path)
+            
+            # Удаляем кэш по всему корню, чтобы не подтянулся старый байт-код
+            for root, dirs, files in os.walk("."):
+                if "__pycache__" in dirs:
+                    shutil.rmtree(os.path.join(root, "__pycache__"))
+
+            # 3. Распаковка эталона из ZIP
             with zipfile.ZipFile(package_file, 'r') as zip_ref:
                 zip_ref.extractall(".")
+                file_list = zip_ref.namelist()
             
+            # 4. Синхронизация папки пользователя '0'
+            # Теперь, когда папка '0/app' была удалена в п.2, просто копируем свежак
+            if os.path.exists("data/app"):
+                shutil.copytree("data/app", "data/0/app")
+                console.print("[dim]Синхронизация приложений пользователя '0' завершена.[/dim]")
+
+            # 5. Финальная подчистка флагов
             os.remove(flag_file)
             os.remove(package_file)
             
-            console.print("[bold green]Обновление установлено успешно![/bold green]")
-            time.sleep(1.5)
+            apps = [f for f in file_list if "app/" in f.lower()]
+            console.print(f"[green]Успешно! Обновлено объектов: {len(file_list)}[/green]")
+            if apps:
+                console.print(f"[dim]Приложений обновлено: {len(apps)}[/dim]")
+
+            time.sleep(2)
             return True 
         except Exception as e:
-            console.print(f"[bold red]Ошибка обновления:[/bold red] {e}")
+            console.print(f"[bold white on red] ОШИБКА ОБНОВЛЕНИЯ: {e} [/bold white on red]")
             time.sleep(5)
     return False
 

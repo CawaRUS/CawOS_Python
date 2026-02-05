@@ -1,6 +1,6 @@
 import core.fs.fs as fs
 
-about = "Сменить каталог (.. назад, \ в корень)"
+about = "Сменить каталог (.. назад, \\ в корень)"
 
 def execute(args, kernel, console):
     if not args:

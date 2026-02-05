@@ -70,7 +70,7 @@ while True:
 
     elif choice == "6":
         if not info.get("oem_unlock", False):
-            rprint("[bold red]КРИТИЧЕСКАЯ ОШИБКА: OEM_UNLOCK заблокирован. ROOT невозможен.[/]")
+            rprint("[bold red]КРИТИЧЕСКАЯ ОШИБКА: OEM заблокирован. ROOT невозможен.[/]")
         else:
             new_val = not auth.is_root_allowed()
             auth.set_root_allowed(new_val)
@@ -103,5 +103,5 @@ while True:
         rprint("[bold yellow]Завершение сеанса настроек...[/]")
         break
     
-    time.sleep(1.5)
+    time.sleep(3)
     os.system('cls' if os.name == 'nt' else 'clear') # Очистка экрана для красоты

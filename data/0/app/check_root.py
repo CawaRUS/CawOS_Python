@@ -17,7 +17,7 @@ def check_system_status():
     if root_active == "NULL":
         active_status = "[bold white on red] ERROR [/]"
     elif root_active is True:
-        active_status = "[bold yellow]АКТИВЕН (SuperUser)[/]"
+        active_status = "[bold yellow]АКТИВЕН[/]"
     else:
         active_status = "[bold blue]ВЫКЛЮЧЕН[/]"
 

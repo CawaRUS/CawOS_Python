@@ -1,151 +1,225 @@
 import os
 import json
 import shutil
-import time
+from pathlib import Path
 from core import auth
+
 
 class FastbootInterface:
     def __init__(self):
-        self.boot_mode_path = os.path.join("data", "json", "boot_mode.json")
-        # Словарь соответствия разделов и реальных папок/файлов
+        self.data_dir = Path("data")
+        self.json_dir = self.data_dir / "json"
+        self.userdata_dir = self.data_dir / "0"
+        self.boot_mode_path = self.json_dir / "boot_mode.json"
+
         self.partitions = {
-            "kernel": "core/os/CawOS/kernel.py",
-            "shell": "core/shell.py",
-            "recovery": "core/recovery.py",
-            "system": "core/"
+            "kernel": Path("core/os/CawOS/kernel.py"),
+            "shell": Path("core/shell.py"),
+            "recovery": Path("core/recovery.py"),
+            "system": Path("core"),
         }
 
-    def formating(self):
-        json_dir = os.path.join("data", "json")
-        if os.path.exists(json_dir):
-            shutil.rmtree(json_dir)
-        os.makedirs(json_dir)
+        self.required_dirs = ["app", "download", "documents", "photos", "music"]
 
-        # 2. Очистка и восстановление data/0
-        user_dir = os.path.join("data", "0")
-        if not os.path.exists(user_dir):
-            os.makedirs(user_dir)
+    # =========================
+    # UTIL
+    # =========================
 
-        # Список обязательных папок, которые должны быть в системе
-        required_dirs = ["app", "download", "documents", "photos", "music"]
+    def clear_screen(self):
+        os.system("cls" if os.name == "nt" else "clear")
 
-        # Удаляем старое содержимое
-        for item in os.listdir(user_dir):
-            if item == "app": # Твоё условие: приложения плебеев не трогаем
-                continue
-            
-            item_path = os.path.join(user_dir, item)
-            try:
-                if os.path.isfile(item_path) or os.path.islink(item_path):
-                    os.unlink(item_path)
-                else:
-                    shutil.rmtree(item_path)
-            except Exception as e:
-                pass
-
-        # Создаем чистую структуру
-        for folder in required_dirs:
-            path = os.path.join(user_dir, folder)
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-    def set_boot_mode(self, mode):
-        os.makedirs(os.path.dirname(self.boot_mode_path), exist_ok=True)
-        with open(self.boot_mode_path, "w") as f:
-            json.dump({"mode": mode}, f)
+    def get_hwid(self):
+        return "CAW-" + hex(abs(hash(Path.cwd())))[-4:].upper()
 
     def get_oem_status(self):
         data = auth.load_settings()
         return "UNLOCKED" if data.get("oem_unlock", False) else "LOCKED"
 
+    def set_boot_mode(self, mode: str):
+        self.json_dir.mkdir(parents=True, exist_ok=True)
+        with open(self.boot_mode_path, "w", encoding="utf-8") as f:
+            json.dump({"mode": mode}, f)
+
+    # =========================
+    # DATA
+    # =========================
+
+    def format_data(self):
+        if self.json_dir.exists():
+            shutil.rmtree(self.json_dir)
+
+        self.json_dir.mkdir(parents=True, exist_ok=True)
+        self.userdata_dir.mkdir(parents=True, exist_ok=True)
+
+        for item in self.userdata_dir.iterdir():
+            if item.name == "app":
+                continue
+            try:
+                if item.is_file() or item.is_symlink():
+                    item.unlink()
+                else:
+                    shutil.rmtree(item)
+            except Exception as e:
+                print(f"[WARN] Failed to remove {item}: {e}")
+
+        for folder in self.required_dirs:
+            (self.userdata_dir / folder).mkdir(exist_ok=True)
+
+    # =========================
+    # COMMANDS
+    # =========================
+
+    def cmd_oem_unlock(self, hwid):
+        if self.get_oem_status() == "UNLOCKED":
+            print("[!] Device already unlocked.")
+            return
+
+        print("CAUTION: Unlocking will WIPE /data!")
+        confirm = input(f"Enter password ({hwid}): ")
+
+        if confirm != hwid[::-1]:
+            print("[FAIL] Wrong password.")
+            return
+
+        print("[OK] Password verified. Formatting /data...")
+        self.format_data()
+
+        data = auth.load_settings()
+        data["oem_unlock"] = True
+        auth.save_settings(data)
+
+        print("[SUCCESS] Device unlocked.")
+
+    def cmd_flash(self, part, source):
+        if self.get_oem_status() == "LOCKED":
+            print("[FAIL] Device is locked.")
+            return
+
+        if part not in self.partitions:
+            print(f"[FAIL] Partition '{part}' is not flashable.")
+            return
+
+        src = Path(source)
+        dst = self.partitions[part]
+
+        if not src.exists():
+            print(f"[FAIL] Source '{source}' not found.")
+            return
+
+        print(f"Writing '{src}' to '{part}'...")
+
+        try:
+            if src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            else:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+            print("[OKAY] Flash completed.")
+        except Exception as e:
+            print(f"[ERROR] Flash failed: {e}")
+
+    def cmd_erase(self, part):
+        if part in ("data", "userdata"):
+            shutil.rmtree(self.userdata_dir, ignore_errors=True)
+            self.userdata_dir.mkdir(exist_ok=True)
+            print(f"[OKAY] Partition '{part}' erased.")
+        else:
+            print(f"[FAIL] Cannot erase '{part}'.")
+
+    def cmd_reboot(self, mode="normal"):
+            self.set_boot_mode(mode)
+            print(f"Rebooting to {mode}...")
+
+    def cmd_help(self):
+            print("""
+    Available commands:
+
+    help
+            Show this help message
+
+    oem unlock
+            Unlock bootloader (WIPES /data)
+
+    flash <partition> <source>
+            Flash file or directory to partition
+            Partitions:
+            kernel
+            shell
+            recovery
+            system
+
+    erase <data|userdata>
+            Erase user data partition
+
+    reboot
+            Reboot device normally
+
+    reboot recovery
+            Reboot device into recovery
+
+    getvar
+            Print device variables
+                  
+    """.strip())
+
+
+
+    # =========================
+    # MAIN LOOP
+    # =========================
+
     def run(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
-        hwid = "CAW-" + str(hash(os.getcwd()))[-4:]
-        
-        print(f"      CAWOS FASTBOOT INTERFACE      ")
-        print(f"====================================")
-        print(f"PRODUCT NAME: CawOS")
+        self.clear_screen()
+        hwid = self.get_hwid()
+
+        print("      CAWOS FASTBOOT INTERFACE")
+        print("====================================")
+        print("PRODUCT NAME: CawOS")
         print(f"DEVICE ID:    {hwid}")
         print(f"LOCK STATE:   {self.get_oem_status()}")
-        print(f"====================================\n")
+        print("====================================\n")
 
         while True:
-            cmd = input("fastboot> ").strip().split()
-            if not cmd: continue
-            
-            # 1. OEM Unlock (Твоя база)
-            if cmd == ["oem", "unlock"]:
-                if self.get_oem_status() == "UNLOCKED":
-                    print("[!] Device is already unlocked.")
-                    continue
-                print(f"CAUTION: Unlocking will WIPE /data!")
-                confirm = input(f"Enter password ({hwid}): ")
-                if confirm == hwid[::-1]:
-                    print("[OK] Password verified. Formatting /data...")
-                    self.formating()
-                    os.makedirs("data/0", exist_ok=True)
-                    data = auth.load_settings()
-                    data["oem_unlock"] = True
-                    auth.save_settings(data)
-                    print("[SUCCESS] Device unlocked.")
-                else:
-                    print("[FAIL] Wrong password.")
-
-            # 2. РЕАЛЬНАЯ ПРОШИВКА (Flash)
-            elif cmd[0] == "flash":
-                if self.get_oem_status() == "LOCKED":
-                    print("[FAIL] Device is locked. Unlock OEM first.")
-                    continue
-                if len(cmd) < 3:
-                    print("Usage: flash <partition> <source_file>")
-                    continue
-                
-                part, source = cmd[1], cmd[2]
-                if part in self.partitions:
-                    if os.path.exists(source):
-                        target = self.partitions[part]
-                        print(f"Writing '{source}' to '{part}'...")
-                        try:
-                            # Если это папка (system), копируем дерево, если файл - файл
-                            if os.path.isdir(source):
-                                shutil.copytree(source, target, dirs_exist_ok=True)
-                            else:
-                                shutil.copy2(source, target)
-                            print("[OKAY] Flash completed.")
-                        except Exception as e:
-                            print(f"[ERROR] Flash failed: {e}")
-                    else:
-                        print(f"[FAIL] Source file '{source}' not found.")
-                else:
-                    print(f"[FAIL] Partition '{part}' is not flashable.")
-
-            # 3. Стирание данных (Erase)
-            elif cmd[0] == "erase":
-                if len(cmd) < 2:
-                    print("Usage: erase <partition>")
-                    continue
-                part = cmd[1]
-                if part == "data" or part == "userdata":
-                    shutil.rmtree("data/0", ignore_errors=True)
-                    os.makedirs("data/0", exist_ok=True)
-                    print(f"[OKAY] Partition '{part}' erased.")
-                else:
-                    print(f"[FAIL] Cannot erase '{part}' (read-only in fastboot).")
-
-            # 4. Перезагрузка (с выбором режима)
-            elif cmd[0] == "reboot":
-                mode = "normal"
-                if len(cmd) > 1 and cmd[1] == "recovery":
-                    mode = "recovery"
-                
-                self.set_boot_mode(mode)
-                print(f"Rebooting to {mode}...")
+            try:
+                raw = input("fastboot> ").strip()
+            except KeyboardInterrupt:
+                print()
                 break
 
-            elif cmd[0] == "getvar":
-                info = auth.load_settings()
-                for k, v in info.items():
-                    print(f"{k}: {v}")
+            if not raw:
+                continue
 
-            else:
-                print(f"Unknown command: {cmd[0]}")
+            cmd = raw.split()
+
+            match cmd:
+                case ["oem", "unlock"]:
+                    self.cmd_oem_unlock(hwid)
+
+                case ["flash", part, source]:
+                    self.cmd_flash(part, source)
+
+                case ["erase", part]:
+                    self.cmd_erase(part)
+
+                case ["reboot"]:
+                    self.cmd_reboot()
+                    break
+
+                case ["reboot", "recovery"]:
+                    self.cmd_reboot("recovery")
+                    break
+
+                case ["getvar"]:
+                    data = auth.load_settings()
+
+                    print(f"oem_unlock: {data.get('oem_unlock', False)}")
+                    print(f"allow_root: {data.get('allow_root', False)}")
+                    print(f"has_root_password: {bool(data.get('root_password_hash'))}")
+
+
+                case ["help"]:
+                    self.cmd_help()
+
+
+                case _:
+                    print(f"Unknown command: {cmd[0]}")
