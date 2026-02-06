@@ -1,9 +1,12 @@
 import os
 import json
 import shutil
+import logging
 from pathlib import Path
 from core import auth
 
+# Инициализация логгера
+logger = logging.getLogger("fastboot")
 
 class FastbootInterface:
     def __init__(self):
@@ -20,6 +23,7 @@ class FastbootInterface:
         }
 
         self.required_dirs = ["app", "download", "documents", "photos", "music"]
+        logger.info("Fastboot mode started")
 
     # =========================
     # UTIL
@@ -45,6 +49,7 @@ class FastbootInterface:
     # =========================
 
     def format_data(self):
+        logger.warning("Formatting data partition via Fastboot")
         if self.json_dir.exists():
             shutil.rmtree(self.json_dir)
 
@@ -60,6 +65,7 @@ class FastbootInterface:
                 else:
                     shutil.rmtree(item)
             except Exception as e:
+                logger.error(f"Fastboot format error on {item}: {e}")
                 print(f"[WARN] Failed to remove {item}: {e}")
 
         for folder in self.required_dirs:
@@ -70,6 +76,7 @@ class FastbootInterface:
     # =========================
 
     def cmd_oem_unlock(self, hwid):
+        logger.warning("OEM Unlock procedure started")
         if self.get_oem_status() == "UNLOCKED":
             print("[!] Device already unlocked.")
             return
@@ -78,6 +85,7 @@ class FastbootInterface:
         confirm = input(f"Enter password ({hwid}): ")
 
         if confirm != hwid[::-1]:
+            logger.error("OEM Unlock failed: Wrong HWID password")
             print("[FAIL] Wrong password.")
             return
 
@@ -88,10 +96,13 @@ class FastbootInterface:
         data["oem_unlock"] = True
         auth.save_settings(data)
 
+        logger.info("OEM Unlock successful")
         print("[SUCCESS] Device unlocked.")
 
     def cmd_flash(self, part, source):
+        logger.info(f"Flash command: {part} from {source}")
         if self.get_oem_status() == "LOCKED":
+            logger.warning("Flash blocked: Bootloader LOCKED")
             print("[FAIL] Device is locked.")
             return
 
@@ -103,6 +114,7 @@ class FastbootInterface:
         dst = self.partitions[part]
 
         if not src.exists():
+            logger.error(f"Flash error: source {source} not found")
             print(f"[FAIL] Source '{source}' not found.")
             return
 
@@ -114,55 +126,38 @@ class FastbootInterface:
             else:
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
+            logger.info(f"Flash success: {part}")
             print("[OKAY] Flash completed.")
         except Exception as e:
+            logger.exception(f"Flash failed for {part}")
             print(f"[ERROR] Flash failed: {e}")
 
     def cmd_erase(self, part):
+        logger.warning(f"Erase command: {part}")
         if part in ("data", "userdata"):
             shutil.rmtree(self.userdata_dir, ignore_errors=True)
             self.userdata_dir.mkdir(exist_ok=True)
+            logger.info("Userdata partition erased")
             print(f"[OKAY] Partition '{part}' erased.")
         else:
             print(f"[FAIL] Cannot erase '{part}'.")
 
     def cmd_reboot(self, mode="normal"):
-            self.set_boot_mode(mode)
-            print(f"Rebooting to {mode}...")
+        logger.info(f"Rebooting to {mode} via Fastboot")
+        self.set_boot_mode(mode)
+        print(f"Rebooting to {mode}...")
 
     def cmd_help(self):
-            print("""
+        print("""
     Available commands:
-
-    help
-            Show this help message
-
-    oem unlock
-            Unlock bootloader (WIPES /data)
-
-    flash <partition> <source>
-            Flash file or directory to partition
-            Partitions:
-            kernel
-            shell
-            recovery
-            system
-
-    erase <data|userdata>
-            Erase user data partition
-
-    reboot
-            Reboot device normally
-
-    reboot recovery
-            Reboot device into recovery
-
-    getvar
-            Print device variables
-                  
+    help                        Show this help message
+    oem unlock                  Unlock bootloader (WIPES /data)
+    flash <partition> <source>  Flash file or directory to partition
+    erase <data|userdata>       Erase user data partition
+    reboot                      Reboot device normally
+    reboot recovery             Reboot device into recovery
+    getvar                      Print device variables
     """.strip())
-
-
 
     # =========================
     # MAIN LOOP
@@ -211,15 +206,12 @@ class FastbootInterface:
 
                 case ["getvar"]:
                     data = auth.load_settings()
-
                     print(f"oem_unlock: {data.get('oem_unlock', False)}")
                     print(f"allow_root: {data.get('allow_root', False)}")
                     print(f"has_root_password: {bool(data.get('root_password_hash'))}")
 
-
                 case ["help"]:
                     self.cmd_help()
-
 
                 case _:
                     print(f"Unknown command: {cmd[0]}")

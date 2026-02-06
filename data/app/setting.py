@@ -31,6 +31,8 @@ def show_menu(info):
     table.add_row("6", "Доступ к ROOT", "[bold yellow]ОГРАНИЧЕНО[/]" if not info.get("oem_unlock") else get_status_style(info.get("allow_root")))
     table.add_row("7", "Управление паролем ROOT", "[dim]********[/]")
     table.add_row("8", "Выбор нескольких ОС", get_status_style(info.get("multi_os_boot", False)))
+    table.add_row("9", "Цвет промпта", f"[{info.get('color', 'cyan')}]{info.get('color', 'cyan')}[/]")
+    table.add_row("10", "Название системы (Hostname)", f"[bold blue]{info.get('name_os', 'CawOS')}[/]")
     table.add_row("0", "[bold red]Выход[/]", "")
 
     console.print(table)
@@ -99,9 +101,27 @@ while True:
         else:
             rprint("[bold red]Ошибка: Пароли не совпадают.[/]")
 
+    elif choice == "9":
+        colors = ["cyan", "magenta", "yellow", "green", "red", "white", "blue"]
+        rprint(f"[bold]Доступные цвета:[/] {', '.join(colors)}")
+        new_color = input("Введите цвет: ").strip().lower()
+        if new_color in colors:
+            info["color"] = new_color
+            auth.save_settings(info)
+            rprint(f"[green]✔ Цвет изменен на {new_color}[/]")
+        else:
+            rprint("[red]Ошибка: Цвет не поддерживается.[/]")
+
+    elif choice == "10":
+        new_os_name = input("Введите новое название системы: ").strip()
+        if new_os_name:
+            info["name_os"] = new_os_name
+            auth.save_settings(info)
+            rprint(f"[green]✔ Система переименована в {new_os_name}[/]")
+
     elif choice == "0":
         rprint("[bold yellow]Завершение сеанса настроек...[/]")
         break
     
-    time.sleep(3)
-    os.system('cls' if os.name == 'nt' else 'clear') # Очистка экрана для красоты
+    input("Нажмите Enter чтобы продолжить...")
+    os.system('cls' if os.name == 'nt' else 'clear')

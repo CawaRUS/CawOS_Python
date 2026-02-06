@@ -7,7 +7,7 @@ try:
     DEFAULT_OS = info.name_os
     DEFAULT_VER = info.version
 except:
-    DEFAULT_OS = "CawOS"
+    DEFAULT_OS = "NULL"
     DEFAULT_VER = "Unknown"
 
 try:

@@ -25,8 +25,8 @@ def calculate_sha256(file_path):
 def get_current_version():
     """Получение текущей версии из файлов системы."""
     try:
-        import data.info as info_module
-        return info_module.info.version
+        # Пытаемся взять из загруженного модуля
+        return info.info.version
     except Exception:
         try:
             with open(os.path.join("data", "json", "info.json"), "r") as f:
@@ -74,29 +74,29 @@ try:
             border_style=border_style
         ))
 
-        # Текст вопроса
-        prompt = "[bold red]Установить критическое обновление? (y/n): [/bold red]" if is_mandatory else "Начать загрузку и подготовку? (y/n): "
+        # Текст вопроса (теперь переменная prompt_text всегда доступна здесь)
+        prompt_text = "[bold red]Установить критическое обновление? (y/n): [/bold red]" if is_mandatory else "Начать загрузку и подготовку? (y/n): "
         
-    if console.input(prompt).lower() == 'y':
-        file_name = "update_package.zip"
-        with requests.get(data['archive_url'], stream=True) as r:
-            r.raise_for_status() # Теперь он упадет здесь, если будет 404
-            total_size = int(r.headers.get('content-length', 0))
-            
-            with open(file_name, "wb") as f:
-                with Progress() as progress:
-                    task = progress.add_task("[yellow]Скачивание...", total=total_size)
-                    for chunk in r.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                        progress.update(task, advance=len(chunk))
+        # Вся логика загрузки теперь ВНУТРИ условия наличия обновления
+        if console.input(prompt_text).lower() == 'y':
+            file_name = "update_package.zip"
+            with requests.get(data['archive_url'], stream=True) as r:
+                r.raise_for_status() 
+                total_size = int(r.headers.get('content-length', 0))
+                
+                with open(file_name, "wb") as f:
+                    with Progress() as progress:
+                        task = progress.add_task("[yellow]Скачивание...", total=total_size)
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                            progress.update(task, advance=len(chunk))
 
-            # ПРОВЕРКА: Совпадает ли размер скачанного с тем, что в JSON
+            # 2. ПРОВЕРКА: Размер файла
             downloaded_size = os.path.getsize(file_name)
             expected_size = data.get('size')
             
             if expected_size and downloaded_size != expected_size:
                 console.print(f"[bold red]ОШИБКА: Размер файла не совпадает![/bold red]")
-                console.print(f"[dim]Ожидалось: {expected_size}, Получено: {downloaded_size}[/dim]")
                 os.remove(file_name)
                 raise Exception("Файл загружен не полностью или поврежден.")
 
@@ -110,9 +110,9 @@ try:
                 else:
                     console.print("[bold red]ОШИБКА: Контрольная сумма не совпадает![/bold red]")
                     os.remove(file_name)
-                    raise Exception("Файл поврежден при загрузке. Операция отменена.")
+                    raise Exception("Файл поврежден при загрузке.")
             else:
-                console.print("[yellow]Предупреждение: Сервер не предоставил хеш-сумму. Проверка пропущена.[/yellow]")
+                console.print("[yellow]Предупреждение: Проверка хеш-суммы пропущена.[/yellow]")
 
             # 4. Создание флага для main.py
             with open("update_pending.flag", "w", encoding="utf-8") as f:
@@ -121,8 +121,11 @@ try:
             console.print("\n[bold green]Пакет загружен и проверен.[/bold green] Система будет обновлена при перезагрузке.")
             
             if console.input("Перезагрузить CawOS сейчас? (y/n): ").lower() == 'y':
-                info.set_exit_on(1)
+                if hasattr(info, "set_exit_on"):
+                    info.set_exit_on(1)
                 reboot()
+        else:
+            console.print("[yellow]Обновление отменено.[/yellow]")
     else:
         console.print("[green]У вас установлена актуальная версия.[/green]")
 

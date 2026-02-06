@@ -13,7 +13,7 @@ except ImportError:
     sys.exit(1)
 class info:
     name_os = "CawOS"
-    version = "1.3 release #1"
+    version = "1.4 pre-alpha"
 
 def real_time():
     import time

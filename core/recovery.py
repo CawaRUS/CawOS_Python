@@ -4,12 +4,15 @@ import shutil
 import time
 import zipfile
 import requests
+import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, DownloadColumn
 from rich.prompt import Prompt, Confirm
 
-# Пытаемся импортировать clear_screen из main, если не выйдет — создаем свою
+# Инициализация логгера
+logger = logging.getLogger("recovery")
+
 try:
     from main import clear_screen
 except ImportError:
@@ -30,9 +33,9 @@ UPDATE_SERVER = "http://cawas.duckdns.org/system.zip"
 
 def menu(reason="Manual entry"):
     """Главное меню Recovery Mode."""
+    logger.info(f"Entered Recovery Mode. Reason: {reason}")
     while True:
         clear_screen()
-        # ИСПРАВЛЕНО: f-строка и использование безопасной переменной SYSTEM_VERSION
         console.print(Panel(
             f"[bold red]CawOS RECOVERY MODE[/bold red]\n"
             f"[yellow]Status:[/yellow] {reason}", 
@@ -49,6 +52,7 @@ def menu(reason="Manual entry"):
         choice = Prompt.ask("\nВыберите действие", choices=["1", "2", "3", "4"])
         
         if choice == "1":
+            logger.info("Recovery: User requested reboot")
             return "reboot"
         
         elif choice == "2":
@@ -59,10 +63,12 @@ def menu(reason="Manual entry"):
             run_wipe_data()
             
         elif choice == "4":
+            logger.info("Recovery: System power off")
             os._exit(0)
 
 def run_ota_repair():
     """Сетевое восстановление ВСЕЙ системы."""
+    logger.info("OTA Repair initiated")
     console.print(Panel(
         "[bold yellow]ВНИМАНИЕ:[/bold yellow]\n"
         "Будет произведена полная замена системных файлов (core, main.py, data/info.py).\n"
@@ -71,14 +77,17 @@ def run_ota_repair():
     ))
     
     if not Confirm.ask("Начать процесс восстановления?"):
+        logger.info("OTA Repair cancelled by user")
         return False
 
     console.print(f"\n[cyan]Подключение к {UPDATE_SERVER}...[/cyan]")
+    logger.info(f"Connecting to {UPDATE_SERVER}")
     
     try:
         # 1. Загрузка
         response = requests.get(UPDATE_SERVER, stream=True, timeout=15)
         if response.status_code != 200:
+            logger.error(f"OTA Server error: HTTP {response.status_code}")
             console.print(f"[bold red]Ошибка:[/bold red] Сервер вернул код {response.status_code}")
             time.sleep(2)
             return False
@@ -101,9 +110,9 @@ def run_ota_repair():
                     progress.update(task, advance=len(chunk))
 
         # 2. Распаковка
+        logger.info("Download complete. Extracting system image...")
         console.print("[yellow]Распаковка и замена системных компонентов...[/yellow]")
         
-        # Создаем временную папку для распаковки
         temp_dir = "temp_extraction"
         if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
         os.makedirs(temp_dir)
@@ -111,63 +120,68 @@ def run_ota_repair():
         with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
             zip_ref.extractall(temp_dir)
 
-        # 3. Установка (Копируем всё из временной папки в корень проекта)
-        # dirs_exist_ok=True позволит перезаписать существующие файлы (main.py, папку core и т.д.)
+        # 3. Установка
+        logger.info("Applying system update (overwriting core files)...")
         shutil.copytree(temp_dir, ".", dirs_exist_ok=True)
 
         # Очистка
         os.remove(temp_zip)
         shutil.rmtree(temp_dir)
 
+        logger.info("OTA Repair: Success")
         console.print("[bold green]✓ Система CawOS успешно переустановлена![/bold green]")
         input("\nНажмите Enter для перезагрузки...")
         return True
 
     except Exception as e:
+        logger.exception("OTA Repair failed with critical error")
         console.print(f"[bold red]Критическая ошибка восстановления:[/bold red] {e}")
         input("\nНажмите Enter...")
         return False
 
 def run_wipe_data():
     """Сброс пользовательских данных с восстановлением структуры."""
+    logger.warning("User initiated WIPE DATA")
     console.print("\n[bold red]ВНИМАНИЕ: Все настройки и личные файлы будут удалены![/bold red]")
     if Confirm.ask("Выполнить Wipe Data (Factory Reset)?", default=False):
-        # 1. Сброс JSON настроек
-        json_dir = os.path.join("data", "json")
-        if os.path.exists(json_dir):
-            shutil.rmtree(json_dir)
-        os.makedirs(json_dir)
-        console.print("[green]✓[/green] Системные конфиги сброшены.")
+        try:
+            # 1. Сброс JSON настроек
+            json_dir = os.path.join("data", "json")
+            if os.path.exists(json_dir):
+                shutil.rmtree(json_dir)
+            os.makedirs(json_dir)
+            logger.info("Wipe Data: JSON settings cleared")
+            console.print("[green]✓[/green] Системные конфиги сброшены.")
 
-        # 2. Очистка и восстановление data/0
-        user_dir = os.path.join("data", "0")
-        if not os.path.exists(user_dir):
-            os.makedirs(user_dir)
+            # 2. Очистка и восстановление data/0
+            user_dir = os.path.join("data", "0")
+            if not os.path.exists(user_dir):
+                os.makedirs(user_dir)
 
-        # Список обязательных папок, которые должны быть в системе
-        required_dirs = ["app", "download", "documents", "photos", "music"]
+            required_dirs = ["app", "download", "documents", "photos", "music"]
 
-        # Удаляем старое содержимое
-        for item in os.listdir(user_dir):
-            if item == "app": # Твоё условие: приложения плебеев не трогаем
-                continue
+            for item in os.listdir(user_dir):
+                if item == "app": 
+                    continue
+                
+                item_path = os.path.join(user_dir, item)
+                try:
+                    if os.path.isfile(item_path) or os.path.islink(item_path):
+                        os.unlink(item_path)
+                    else:
+                        shutil.rmtree(item_path)
+                except Exception as e:
+                    logger.error(f"Failed to clear {item}: {e}")
+                    console.print(f"[dim red]Ошибка очистки {item}: {e}[/dim red]")
+
+            for folder in required_dirs:
+                path = os.path.join(user_dir, folder)
+                if not os.path.exists(path):
+                    os.makedirs(path)
             
-            item_path = os.path.join(user_dir, item)
-            try:
-                if os.path.isfile(item_path) or os.path.islink(item_path):
-                    os.unlink(item_path)
-                else:
-                    shutil.rmtree(item_path)
-            except Exception as e:
-                console.print(f"[dim red]Ошибка очистки {item}: {e}[/dim red]")
-
-        # Создаем чистую структуру
-        for folder in required_dirs:
-            path = os.path.join(user_dir, folder)
-            if not os.path.exists(path):
-                os.makedirs(path)
-        
-        console.print("[green]✓[/green] Структура папок [cyan]data/0[/cyan] восстановлена.")
-        
-        input("\nСброс завершен успешно. Нажмите Enter для перезагрузки...")
-        clear_screen()
+            logger.info("Wipe Data: Success")
+            console.print("[green]✓[/green] Структура папок [cyan]data/0[/cyan] восстановлена.")
+            input("\nСброс завершен успешно. Нажмите Enter для перезагрузки...")
+            clear_screen()
+        except Exception as e:
+            logger.exception("Wipe Data failed")
