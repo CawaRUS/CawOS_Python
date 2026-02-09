@@ -1,9 +1,11 @@
+deadlock = True
 import os
 import json
 import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
+import ast
 
 # Инициализация логгера
 logger = logging.getLogger("secury")
@@ -114,3 +116,57 @@ def confirm_delete(path, is_root):
         logger.info(f"User CANCELLED deletion of: {path}")
         console.print("[green]Действие отменено.[/green]")
         return False
+
+def can_read_file(path, is_root=False):
+    """
+    Интеллектуальная проверка протокола DEADLOCK.
+    """
+    # Импортируем fs здесь, чтобы избежать циклической зависимости при загрузке системы
+    from core.fs import fs
+    
+    target_path = fs.get_full_path(path)
+    
+    if not os.path.exists(target_path) or os.path.isdir(target_path):
+        return True
+
+    try:
+        # Читаем файл полностью для корректного AST анализа
+        # Если файл огромный (>1MB), читаем только первые 5000 символов
+        file_size = os.path.getsize(target_path)
+        with open(target_path, 'r', encoding='utf-8', errors='ignore') as f:
+            if file_size < 1000000:
+                content = f.read()
+            else:
+                content = f.read(5000)
+            
+            if "deadlock" not in content.lower():
+                return True
+            
+            tree = ast.parse(content)
+            for node in tree.body:
+                if isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name) and target.id == 'deadlock':
+                            value = node.value
+                            # Поддержка Python 3.8+ (ast.Constant)
+                            if isinstance(value, ast.Constant) and value.value is True:
+                                logger.warning(f"SECURITY: Deadlock active for {path}")
+                                console.print(Panel(
+                                    f"[bold red]ПРОТОКОЛ DEADLOCK АКТИВИРОВАН[/bold red]\n"
+                                    f"Ядро заблокировало доступ к листингу [cyan]{path}[/cyan].\n\n"
+                                    f"Обнаружена логическая блокировка: [yellow]deadlock = True[/yellow].\n"
+                                    f"Чтение или изменение кода запрещено.",
+                                    title="[white on red] KERNEL PROTECT [/]",
+                                    border_style="red"
+                                ))
+                                return False
+                                
+    except SyntaxError:
+        # Резервный метод на случай синтаксических ошибок в файле
+        if "deadlock=true" in content.lower().replace(" ", ""):
+            return False
+    except Exception as e:
+        logger.debug(f"Deadlock check skipped for {path}: {e}")
+        return True
+
+    return True

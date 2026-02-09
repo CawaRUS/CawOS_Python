@@ -5,7 +5,7 @@ about = "Показать содержимое веб-страницы (GET)"
 
 def execute(args, kernel, console):
     if not args:
-        console.print("[red]Использование: http <url>[/red]")
+        console.print("[red]Использование: web <url>[/red]")
         return
         
     url = args[0]

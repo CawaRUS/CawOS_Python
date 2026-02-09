@@ -1,4 +1,5 @@
 # boot.py — загрузчик ОС с соблюдением пользовательских настроек
+deadlock = True
 import os
 import json
 import logging

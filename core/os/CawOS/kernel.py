@@ -1,5 +1,4 @@
 import time
-import os
 import logging
 from colorama import Fore, Style
 
@@ -81,7 +80,6 @@ class Kernel:
         print(Fore.YELLOW + "[KERNEL] Режим ROOT деактивирован." + Style.RESET_ALL)
 
     def init_system(self):
-        # Здесь можно добавить проверку здоровья FS перед стартом
         logger.info("System subsystems check: OK")
         print(Fore.GREEN + "[KERNEL] Модули инициализированы успешно." + Style.RESET_ALL)
         

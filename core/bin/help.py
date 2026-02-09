@@ -1,81 +1,62 @@
-import os
 import json
-import importlib.util
+import core.fs.fs as fs
 from rich.table import Table
 
 about = "Показать список доступных команд и пакетов (с пагинацией)"
 
 def execute(args, kernel, console):
-    # --- НАСТРОЙКИ СТРАНИЦ ---
-    ITEMS_PER_PAGE = 8  # Сколько команд выводить за раз
-    
-    # Определяем текущую страницу из аргументов (например: help 2)
+    ITEMS_PER_PAGE = 8
     try:
         page = int(args[0]) if args else 1
-        if page < 1: page = 1
+        page = max(1, page)
     except ValueError:
         page = 1
 
-    bin_path = os.path.join("core", "bin")
-    all_entries = [] # Сюда соберем всё: и Core, и Packages
-
-    # 1. Сбор системных команд
-    if os.path.exists(bin_path):
-        for file in os.listdir(bin_path):
-            if file.endswith(".py"):
-                cmd_name = file[:-3]
-                cmd_path = os.path.join(bin_path, file)
-                try:
-                    # Используем кэширование или упрощенный импорт, если можно, 
-                    # но пока оставим твою логику импорта для точности
-                    spec = importlib.util.spec_from_file_location(cmd_name, cmd_path)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    desc = getattr(module, "about", "Нет описания")
-                except:
-                    desc = "[red]Ошибка чтения about[/red]"
+    bin_path = fs.join_paths(fs.root_limit, "core", "bin")
+    all_entries = []
+    if fs.exists(bin_path):
+        for entry in fs.list_dir(bin_path):
+            full_path = fs.join_paths(bin_path, entry)
+            
+            # 1. Обработка системных команд (.py файлов)
+            if entry.endswith(".py") and entry != "__init__.py":
+                cmd_name = entry[:-3]
+                # Вызываем наш новый безопасный метод
+                desc = fs.get_command_about(full_path)
                 all_entries.append((cmd_name, desc, "Core"))
-
-    # 2. Сбор пакетов
-    ignored_dirs = ["__pycache__", ".git", ".pytest_cache"]
-    if os.path.exists(bin_path):
-        for entry in os.listdir(bin_path):
-            sub_path = os.path.join(bin_path, entry)
-            if os.path.isdir(sub_path) and entry not in ignored_dirs and not entry.startswith('.'):
-                json_path = os.path.join(sub_path, "about.json")
+            
+            # 2. Обработка пакетов (папок)
+            elif fs.is_dir(full_path) and not entry.startswith(('.', '__')):
+                json_path = fs.join_paths(full_path, "about.json")
                 pack_about = "Краткое описание отсутствует"
-                if os.path.exists(json_path):
+                
+                if fs.exists(json_path):
                     try:
+                        # Тут используем обычный open, так как fs разрешает чтение данных
                         with open(json_path, "r", encoding="utf-8") as f:
                             data = json.load(f)
-                            pack_about = data.get("about", pack_about)
+                            pack_about = data.get("about", data.get("description", pack_about))
                     except:
                         pack_about = "[red]Ошибка JSON[/red]"
                 all_entries.append((entry, pack_about, "Package"))
 
-    # Сортируем общий список по имени
     all_entries.sort(key=lambda x: x[0])
 
-    # --- ЛОГИКА ПАГИНАЦИИ ---
     total_items = len(all_entries)
-    total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
+    total_pages = max(1, (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
+    if page > total_pages: page = total_pages
 
-    if page > total_pages:
-        page = total_pages
-
-    # Срез списка для текущей страницы
     start_idx = (page - 1) * ITEMS_PER_PAGE
-    end_idx = start_idx + ITEMS_PER_PAGE
-    page_items = all_entries[start_idx:end_idx]
+    page_items = all_entries[start_idx:start_idx + ITEMS_PER_PAGE]
 
-    # --- ОТРИСОВКА ---
     table = Table(
         title=f"[bold blue]Справка CawOS[/bold blue] [dim](Страница {page} из {total_pages})[/dim]",
-        caption=f"Используйте: [cyan]help [номер_страницы][/cyan] | Всего команд: {total_items}"
+        caption=f"Используйте: [cyan]help [номер][/cyan] | Всего: {total_items}",
+        border_style="bright_black"
     )
-    table.add_column("Команда / Пакет", style="cyan", no_wrap=True)
+    table.add_column("Команда / Пакет", style="cyan")
     table.add_column("Описание", style="magenta")
-    table.add_column("Тип", style="dim")
+    table.add_column("Тип", style="green")
 
     for name, desc, c_type in page_items:
         table.add_row(name, desc, c_type)

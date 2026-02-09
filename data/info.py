@@ -1,3 +1,4 @@
+deadlock = True
 try:
     import json
 except ImportError:
@@ -13,7 +14,7 @@ except ImportError:
     sys.exit(1)
 class info:
     name_os = "CawOS"
-    version = "1.4 pre-alpha"
+    version = "1.4 alpha"
 
 def real_time():
     import time

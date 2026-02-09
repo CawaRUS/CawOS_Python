@@ -1,4 +1,3 @@
-import os
 import requests
 import core.fs.fs as fs
 from rich.progress import Progress

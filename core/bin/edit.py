@@ -1,7 +1,6 @@
-import sys
-import shutil
 import core.fs.fs as fs
-from core.input.keyboard import *
+from core.io.keyboard import *
+from core import secure
 
 about = "Системный текстовый редактор"
 
@@ -10,25 +9,25 @@ CTRL_X = chr(24)
 
 def enter_alt_screen():
     # Переход в альтернативный буфер и скрытие курсора
-    sys.stdout.write("\x1b[?1049h\x1b[?25l")
-    sys.stdout.flush()
+    fs.raw_write("\x1b[?1049h\x1b[?25l")
+    
 
 def exit_alt_screen():
     # Возврат в основной буфер и показ курсора
-    sys.stdout.write("\x1b[?1049l\x1b[?25h")
-    sys.stdout.flush()
+    fs.raw_write("\x1b[?1049l\x1b[?25h")
+    
 
 def clear():
-    sys.stdout.write("\x1b[2J\x1b[H")
+    fs.raw_write("\x1b[2J\x1b[H")
 
 def move(y, x):
-    sys.stdout.write(f"\x1b[{y};{x}H")
+    fs.raw_write(f"\x1b[{y};{x}H")
 
 def clamp(v, a, b):
     return max(a, min(b, v))
 
 def draw(lines, cx, cy, rowoff, filename, dirty):
-    cols, rows = shutil.get_terminal_size()
+    cols, rows = fs.get_term_size()
     # Оставляем место под статус-бар
     view_height = rows - 2 
 
@@ -41,19 +40,19 @@ def draw(lines, cx, cy, rowoff, filename, dirty):
         if i < len(lines):
             # Обрезаем строку по ширине экрана, чтобы не ломать разметку
             line_content = lines[i][:cols]
-            sys.stdout.write(line_content + "\x1b[K\n") # \x1b[K очищает строку до конца
+            fs.raw_write(line_content + "\x1b[K\n") # \x1b[K очищает строку до конца
         else:
-            sys.stdout.write("~\x1b[K\n")
+            fs.raw_write("~\x1b[K\n")
 
     # Рисуем статус-бар
-    sys.stdout.write("\x1b[7m" + "-" * cols + "\x1b[0m\n") # Инверсия цвета для красоты
+    fs.raw_write("\x1b[7m" + "-" * cols + "\x1b[0m\n") # Инверсия цвета для красоты
     status = f" {filename}{'*' if dirty else ''} | Ctrl+S: Save | Ctrl+X: Exit | Ln {cy+1}, Col {cx+1}"
-    sys.stdout.write("\x1b[7m" + status[:cols].ljust(cols) + "\x1b[0m")
+    fs.raw_write("\x1b[7m" + status[:cols].ljust(cols) + "\x1b[0m")
     
     # Показываем курсор в нужной позиции
     move(cy - rowoff + 1, cx + 1)
-    sys.stdout.write("\x1b[?25h") # Включаем курсор перед отрисовкой позиции
-    sys.stdout.flush()
+    fs.raw_write("\x1b[?25h") # Включаем курсор перед отрисовкой позиции
+    
 
 def execute(args, kernel, console):
     if not args:
@@ -61,6 +60,8 @@ def execute(args, kernel, console):
         return
 
     filename = args[0]
+    if not secure.can_read_file(filename, kernel.root_mode):
+        return
     text = fs.read_file(filename) or ""
     lines = text.split("\n") if text else [""]
 
@@ -122,7 +123,7 @@ def execute(args, kernel, console):
 
             # Коррекция курсора и скроллинга
             cx = clamp(cx, 0, len(lines[cy]))
-            _, rows = shutil.get_terminal_size()
+            _, rows = fs.get_term_size()
             view_height = rows - 2
             if cy < rowoff:
                 rowoff = cy

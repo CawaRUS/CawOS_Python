@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 from logging.handlers import RotatingFileHandler
+deadlock = True
 
 # Путь к логу
 LOG_DIR = "data/log"

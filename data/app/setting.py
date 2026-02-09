@@ -1,16 +1,19 @@
+deadlock = True
 import os
 import json
 import getpass
 import time
+import logging
 from datetime import datetime
 
-# Библиотеки Rich для красоты
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich import print as rprint
 
 from core import auth
+
+logger = logging.getLogger("setting")
 
 console = Console()
 
@@ -38,6 +41,7 @@ def show_menu(info):
     console.print(table)
 
 # Основной цикл
+logger.info("Settings menu opened")
 while True:
     # Обновляем данные из файла каждый раз, чтобы видеть изменения других модулей
     info = auth.load_settings() 
@@ -51,8 +55,10 @@ while True:
     elif choice == "2":
         new_name = input("Введите новое имя пользователя: ").strip()
         if new_name:
+            old_name = info.get('username', 'user')
             info["username"] = new_name
             auth.save_settings(info)
+            logger.info(f"Username changed from '{old_name}' to '{new_name}'")
             rprint(f"[green]✔ Имя изменено на {new_name}[/]")
 
     elif choice == "3":
@@ -60,6 +66,7 @@ while True:
         if os.path.exists(apps_path):
             rprint(Panel("\n".join([f"{a[:-3]}" for a in os.listdir(apps_path) if a.endswith(".py")]), title="Установленное ПО"))
         else:
+            logger.error("Failed to list apps: directory not found")
             rprint("[red]Ошибка: Папка приложений не найдена[/]")
 
     elif choice in ["4", "5", "8"]:
@@ -68,23 +75,26 @@ while True:
         key = keys[choice]
         info[key] = not info.get(key, True)
         auth.save_settings(info)
+        logger.info(f"System setting '{key}' set to {info[key]}")
         rprint(f"[yellow]Параметр {key} изменен.[/]")
 
     elif choice == "6":
         if not info.get("oem_unlock", False):
+            logger.warning("Attempted to toggle ROOT while OEM is locked")
             rprint("[bold red]КРИТИЧЕСКАЯ ОШИБКА: OEM заблокирован. ROOT невозможен.[/]")
         else:
             new_val = not auth.is_root_allowed()
             auth.set_root_allowed(new_val)
+            logger.info(f"ROOT access toggle: {new_val}")
             rprint(f"Статус ROOT: {get_status_style(new_val)}")
 
     elif choice == "7":
-        # БЕЗОПАСНОСТЬ: Используем getpass, чтобы пароль не отображался при вводе
         if auth.has_root_password():
             old_p = getpass.getpass("Введите текущий пароль ROOT: ")
             if not auth.verify_root_password(old_p):
+                logger.warning("ROOT password change failed: incorrect current password")
                 rprint("[bold red]ОШИБКА: Доступ запрещен. Неверный пароль![/]")
-                time.sleep(1) # Защита от брутфорса
+                time.sleep(1)
                 continue
         
         rprint("[blue]Режим смены пароля активирован.[/]")
@@ -97,8 +107,10 @@ while True:
         
         if p1 == p2:
             auth.set_root_password(p1)
+            logger.info("ROOT password successfully updated")
             rprint("[bold green]Пароль ROOT успешно обновлён и хэширован.[/]")
         else:
+            logger.warning("ROOT password change failed: passwords mismatch")
             rprint("[bold red]Ошибка: Пароли не совпадают.[/]")
 
     elif choice == "9":
@@ -108,6 +120,7 @@ while True:
         if new_color in colors:
             info["color"] = new_color
             auth.save_settings(info)
+            logger.info(f"UI color changed to {new_color}")
             rprint(f"[green]✔ Цвет изменен на {new_color}[/]")
         else:
             rprint("[red]Ошибка: Цвет не поддерживается.[/]")
@@ -115,11 +128,14 @@ while True:
     elif choice == "10":
         new_os_name = input("Введите новое название системы: ").strip()
         if new_os_name:
+            old_os = info.get('name_os', 'CawOS')
             info["name_os"] = new_os_name
             auth.save_settings(info)
+            logger.info(f"System name changed from '{old_os}' to '{new_os_name}'")
             rprint(f"[green]✔ Система переименована в {new_os_name}[/]")
 
     elif choice == "0":
+        logger.info("Settings menu closed")
         rprint("[bold yellow]Завершение сеанса настроек...[/]")
         break
     

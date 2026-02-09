@@ -1,3 +1,4 @@
+deadlock = True
 import requests
 import os
 import json

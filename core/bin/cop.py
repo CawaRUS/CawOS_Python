@@ -1,7 +1,5 @@
-import os
 import json
 import zipfile
-import shutil
 import requests
 import hashlib
 import core.fs.fs as fs  # Импортируем твою файловую систему
@@ -29,6 +27,7 @@ def execute(args, kernel, console):
         return
 
     # --- СБОРКА ПАКЕТА (BUILD) ---
+# --- СБОРКА ПАКЕТА (BUILD) ---
     if args[0] == "build":
         if len(args) < 2:
             console.print("[red]Ошибка: Укажите папку для сборки[/red]")
@@ -38,35 +37,43 @@ def execute(args, kernel, console):
         raw_path = args[1]
         src_dir = fs.get_full_path(raw_path) 
         
-        # 2. Проверки папки и конфига (оставляем как было)
-        if not os.path.exists(src_dir):
+        # 2. Проверки папки и конфига
+        if not fs.exists(src_dir):
             console.print(f"[bold red]❌ ОШИБКА:[/bold red] Директория '[white]{raw_path}[/white]' не найдена.")
             return
         
-        about_path = os.path.join(src_dir, "about.json")
-        if not os.path.exists(about_path):
+        about_path = fs.join_paths(src_dir, "about.json")
+        if not fs.exists(about_path):
             console.print(f"[bold red]❌ ОШИБКА:[/bold red] В папке отсутствует [yellow]about.json[/yellow]")
             return
 
         try:
+            # Импортируем ядро защиты
+            from core import secure
+
             with open(about_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             
             pkg_name = data.get("name", "unknown")
-            
-            # --- МАГИЯ ПУТИ СОХРАНЕНИЯ ---
-            # Берем текущий путь пользователя из fs.current_path
-            # и создаем полный путь для сохранения .cop файла именно туда
             file_name = f"{pkg_name}.cop"
-            output_full_path = os.path.join(fs.current_path, file_name)
+            output_full_path = fs.join_paths(fs.current_path, file_name)
 
-            # 4. Сборка архива
-            # Теперь используем полный путь для сохранения
+            # 4. Сборка архива с проверкой безопасности
             with zipfile.ZipFile(output_full_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for root, dirs, files in os.walk(src_dir):
+                for root, dirs, files in fs.walk(src_dir):
                     for file in files:
-                        file_path = os.path.join(root, file)
-                        arcname = os.path.relpath(file_path, src_dir)
+                        file_path = fs.join_paths(root, file)
+                        
+                        # ПРОВЕРКА НА DEADLOCK
+                        # Если файл защищен, can_read_file сам выведет панель с ошибкой
+                        if not secure.can_read_file(file_path, kernel.root_mode):
+                            console.print(f"[bold red]❌ СБОРКА ОСТАНОВЛЕНА:[/bold red] Обнаружен защищенный файл: [yellow]{file}[/yellow]")
+                            zipf.close() # Закрываем поток перед удалением
+                            if fs.exists(output_full_path):
+                                fs.remove_file(output_full_path)
+                            return
+
+                        arcname = fs.get_relpath(file_path, src_dir)
                         zipf.write(file_path, arcname)
             
             console.print(f"[bold green]✓ Пакет {file_name} успешно собран![/bold green]")
@@ -75,6 +82,9 @@ def execute(args, kernel, console):
             
         except Exception as e:
             console.print(f"[red]Критическая ошибка сборки: {e}[/red]")
+            # На случай ошибки тоже подчищаем битый файл
+            if 'output_full_path' in locals() and fs.exists(output_full_path):
+                fs.remove(output_full_path)
 
     # --- ПУБЛИКАЦИЯ (PUSH) ---
     elif args[0] == "push":
@@ -85,7 +95,7 @@ def execute(args, kernel, console):
         # Также используем fs для поддержки локальных путей
         file_path = fs.get_full_path(args[1])
         
-        if not os.path.exists(file_path):
+        if not fs.exists(file_path):
             console.print(f"[red]Файл '{args[1]}' не найден![/red]")
             return
 
@@ -125,7 +135,7 @@ def execute(args, kernel, console):
             console.print(f"[cyan]Поиск '{pkg_name}' на сервере...[/cyan]")
             
             # 1. Скачиваем во временный файл
-            temp_path = os.path.join(fs.current_path, f"downloading_{pkg_name}.cop")
+            temp_path = fs.join_paths(fs.current_path, f"downloading_{pkg_name}.cop")
             
             with requests.get(FILE_URL, stream=True) as r:
                 if r.status_code == 404:
@@ -141,7 +151,7 @@ def execute(args, kernel, console):
             with zipfile.ZipFile(temp_path, 'r') as zip_ref:
                 if 'about.json' not in zip_ref.namelist():
                     console.print("[bold red]Ошибка: Пакет поврежден (нет about.json)[/bold red]")
-                    os.remove(temp_path)
+                    fs.remove(temp_path)
                     return
                 
                 with zip_ref.open('about.json') as f:
@@ -153,33 +163,33 @@ def execute(args, kernel, console):
                 console.print(f"📝 Описание: {pkg_data.get('description', 'Нет описания')}")
                 console.print(f"👤 Автор: {pkg_data.get('author', 'Неизвестен')}")
                 console.print(f"🏗 Тип: {pkg_data.get('type', 'app')}")
-                console.print(f"📏 Размер: {os.path.getsize(temp_path) // 1024} KB")
+                console.print(f"📏 Размер: {fs.get_size(temp_path) // 1024} KB")
 
                 if not Confirm.ask("\n[bold yellow]Установить этот пакет?[/bold yellow]"):
-                    os.remove(temp_path)
+                    fs.remove(temp_path)
                     console.print("[gray]Установка отменена.[/gray]")
                     return
 
             # 3. Если согласились — вызываем локальную установку
             # Переименовываем в нормальное имя, чтобы install_local не путался
-            final_temp = os.path.join(fs.current_path, f"{pkg_name}.cop")
-            os.rename(temp_path, final_temp)
+            final_temp = fs.join_paths(fs.current_path, f"{pkg_name}.cop")
+            fs.rename(temp_path, final_temp)
             
             install_local(final_temp, kernel, console)
             
             # Чистим за собой
-            if os.path.exists(final_temp):
-                os.remove(final_temp)
+            if fs.exists(final_temp):
+                fs.remove(final_temp)
 
         except Exception as e:
             console.print(f"[bold red]Ошибка:[/bold red] {e}")
-            if 'temp_path' in locals() and os.path.exists(temp_path):
-                os.remove(temp_path)
+            if 'temp_path' in locals() and fs.exists(temp_path):
+                fs.remove(temp_path)
 
 def install_local(package_path, kernel, console):
     # Логика установки остается прежней, но теперь всегда получает полный путь
     try:
-        if not os.path.exists(package_path):
+        if not fs.exists(package_path):
             console.print(f"[red]Файл '{package_path}' не найден.[/red]")
             return
 
@@ -198,14 +208,14 @@ def install_local(package_path, kernel, console):
                 if not kernel.root_mode:
                     console.print("[bold white on red] ACCESS DENIED [/]\n[red]ROOT необходим для 'pack'.[/red]")
                     return
-                install_dir = os.path.join("core", "bin", pkg_name)
+                install_dir = fs.join_paths("core", "bin", pkg_name)
             else:
-                install_dir = os.path.join("data", "0", "app", pkg_name)
+                install_dir = fs.join_paths("data", "0", "app", pkg_name)
 
-            if os.path.exists(install_dir):
-                shutil.rmtree(install_dir)
+            if fs.exists(install_dir):
+                fs.rmtree(install_dir)
 
-            os.makedirs(install_dir, exist_ok=True)
+            fs.makedirs(install_dir, exist_ok=True)
             zip_ref.extractall(install_dir)
             console.print(f"[bold green]✓ '{pkg_name}' установлен в {install_dir}[/bold green]")
 

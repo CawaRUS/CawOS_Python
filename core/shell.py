@@ -1,8 +1,10 @@
 import os, json, importlib.util, sys
 import logging
+import ast  # Для анализа структуры кода
 import core.fs.fs as fs
 from rich.console import Console
 from rich.prompt import Prompt
+from rich.panel import Panel
 from rich.traceback import install as install_traceback
 
 # Настройка логгера для шелла
@@ -29,13 +31,44 @@ def load_user_info():
         logger.debug(f"User info.json not found or corrupted: {e}")
         return {}
 
+def is_command_safe(command_path):
+    """
+    Анализирует код команды перед запуском.
+    Запрещает прямой импорт опасных системных библиотек.
+    """
+    try:
+        with open(command_path, "r", encoding="utf-8") as f:
+            code = f.read()
+        
+        tree = ast.parse(code)
+        # Список модулей, которые запрещено использовать в обход API
+        forbidden = ['os', 'shutil', 'subprocess', 'sys', 'pathlib', 'socket']
+        
+        for node in ast.walk(tree):
+            # Проверка 'import os'
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    base_module = alias.name.split('.')[0]
+                    if base_module in forbidden:
+                        return False, alias.name
+            
+            # Проверка 'from os import path'
+            if isinstance(node, ast.ImportFrom):
+                if node.module:
+                    base_module = node.module.split('.')[0]
+                    if base_module in forbidden:
+                        return False, node.module
+                    
+        return True, None
+    except Exception as e:
+        return False, f"Ошибка анализа кода: {e}"
+
 def run(kernel_instance):
     logger.info("Shell session started")
-    # --- ПОДГОТОВКА ПЕРЕМЕННЫХ ---
+    
     if not hasattr(kernel_instance, 'previous_path'):
         kernel_instance.previous_path = fs.current_path
 
-    info_data = load_user_info()
     bin_path = os.path.join("core", "bin")
 
     while kernel_instance.running:
@@ -61,13 +94,12 @@ def run(kernel_instance):
         command_name = cmd_parts[0].lower()
         args = cmd_parts[1:]
         
-        # Логируем ввод пользователя (без аргументов для приватности, если нужно)
         logger.info(f"Command entered: {command_name} with args: {args}")
         
         command_file = None
         module_key = command_name 
 
-        # --- ЛОГИКА ПОИСКА (ПРОСТАЯ ИЛИ ПАКЕТНАЯ) ---
+        # --- ПОИСК КОМАНДЫ ---
         potential_pack_path = os.path.join(bin_path, command_name)
         
         if os.path.isdir(potential_pack_path) and len(args) > 0:
@@ -78,28 +110,38 @@ def run(kernel_instance):
                 command_file = target_path
                 module_key = f"{command_name}_{sub_command}" 
                 args = args[1:]
-                logger.debug(f"Detected packet command. Targeting: {target_path}")
         
         if not command_file:
             direct_path = os.path.join(bin_path, f"{command_name}.py")
             if os.path.isfile(direct_path):
                 command_file = direct_path
 
-        # --- ЗАПУСК КОМАНДЫ ---
+        # --- ЗАПУСК С ПРОВЕРКОЙ БЕЗОПАСНОСТИ ---
         if command_file:
+            # 1. СКАНИРОВАНИЕ КОДА (Вариант А)
+            safe, violation = is_command_safe(command_file)
+            if not safe:
+                logger.warning(f"SECURITY ALERT: Command '{command_name}' blocked. Direct use of '{violation}' detected.")
+                console.print(Panel(
+                    f"[bold red]НАРУШЕНИЕ ПРОТОКОЛА БЕЗОПАСНОСТИ[/bold red]\n\n"
+                    f"Команде [cyan]'{command_name}'[/cyan] запрещено напрямую импортировать [yellow]'{violation}'[/yellow].\n"
+                    f"Используйте официальные системные вызовы через [green]core.fs[/green].",
+                    title="[white on red] SANDBOX VIOLATION [/]",
+                    border_style="red"
+                ))
+                continue
+
             try:
-                # 1. Очистка кэша модуля
+                # 2. Очистка кэша
                 if module_key in sys.modules:
                     del sys.modules[module_key]
-                    logger.debug(f"Cache cleared for module: {module_key}")
 
-                # 2. Динамический импорт
+                # 3. Загрузка и выполнение
                 spec = importlib.util.spec_from_file_location(module_key, command_file)
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[module_key] = module 
                 spec.loader.exec_module(module)
                 
-                # 3. Безопасное выполнение
                 if hasattr(module, 'execute'):
                     result = module.execute(args, kernel_instance, console)
                     
@@ -108,10 +150,10 @@ def run(kernel_instance):
                         return result
                 else:
                     logger.error(f"Function execute() missing in {command_file}")
-                    console.print(f"[bold red][ERROR][/bold red] В файле '{command_name}' не найдена функция execute().")
+                    console.print(f"[bold red][ERROR][/bold red] Функция execute() не найдена.")
                     
             except Exception as e:
-                logger.exception(f"Exception during command '{command_name}' execution")
+                logger.exception(f"Exception during command execution")
                 console.print(f"[bold red]Критический сбой команды '{command_name}':[/bold red]")
                 console.print_exception() 
         else:

@@ -1,29 +1,41 @@
 import core.fs.fs as fs
 
-about = "Сменить каталог (.. назад, \\ в корень)"
+about = "Сменить каталог (.. назад, - прошлый путь, \\ корень)"
 
 def execute(args, kernel, console):
     if not args:
-        console.print("[red]Укажите папку[/red]")
+        console.print(f"Текущая директория: [cyan]{fs.current_path}[/cyan]")
         return
 
     target = args[0]
-    
-    # Работа с предыдущим путем (сохраняем в kernel, чтобы не терять между вызовами)
     if not hasattr(kernel, 'previous_path'):
         kernel.previous_path = fs.current_path
 
-    if target == "-":
-        fs.current_path, kernel.previous_path = kernel.previous_path, fs.current_path
-        console.print(f"Перешли в [green]{fs.current_path}[/green]")
+    if target == "\\":
+        if not kernel.root_mode:
+            console.print("[red]Ошибка доступа: Root Mode необходим.[/red]")
+            return
+        # Вместо os.path.abspath используем fs
+        target_abs = fs.base_root if hasattr(fs, 'base_root') else "."
+    
+    elif target == "-":
+        old_path = fs.current_path
+        fs.current_path = kernel.previous_path
+        kernel.previous_path = old_path
+        console.print(f"Вернулись в [green]{fs.current_path}[/green]")
         return
 
-    if not kernel.root_mode and target == "\\":
-        console.print("[red]Доступ к системной директории запрещен.[/red]")
+    potential_path = fs.get_full_path(target)
+
+    if not fs.exists(target): # Используем нашу новую обертку
+        console.print(f"[red]Ошибка:[/red] Путь '{target}' не существует.")
+        return
+    
+    if not fs.is_dir(target):
+        console.print(f"[red]Ошибка:[/red] '{target}' — это файл.")
         return
 
-    kernel.previous_path = fs.current_path
+    old_path = fs.current_path
     if fs.change_dir(target):
+        kernel.previous_path = old_path
         console.print(f"Перешли в [green]{fs.current_path}[/green]")
-    else:
-        console.print("[red]Папка не найдена[/red]")

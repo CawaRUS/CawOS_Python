@@ -1,4 +1,5 @@
 # main.py — основной загрузчик CawOS с поддержкой Recovery и защитой от прерываний
+deadlock = True
 import os
 import time
 import sys
@@ -89,49 +90,57 @@ def apply_updates():
 
             with zipfile.ZipFile(package_file, 'r') as zip_ref:
                 file_list = zip_ref.namelist()
-                # 2. УМНАЯ ОЧИСТКА: собираем цели из обоих путей в архиве
+                # 2. УМНАЯ ОЧИСТКА: только для системной папки!
                 items_to_update = set()
                 for f in file_list:
-                    # Проверяем обе папки в архиве
                     for prefix in ["data/app/", "data/0/app/"]:
                         if f.startswith(prefix):
                             parts = f.split("/")
-                            # parts[0]=data, parts[1]=0 или app, parts[2]=название_папки
                             idx = 2 if prefix == "data/app/" else 3
                             if len(parts) > idx:
                                 items_to_update.add(parts[idx])
 
-                # Удаляем ТОЛЬКО те папки/файлы, которые приехали в ZIP
-                for base in ["data/app", "data/0/app"]:
-                    for item in items_to_update:
-                        target_path = os.path.join(base, item)
-                        if os.path.exists(target_path):
-                            logging.info(f"Targeted cleanup: {target_path}")
-                            if os.path.isdir(target_path):
-                                shutil.rmtree(target_path)
-                            else:
-                                os.remove(target_path)
+                # Очищаем ТОЛЬКО временную системную папку data/app
+                # Папку data/0/app НЕ ТРОГАЕМ удалением, чтобы сохранить данные юзера
+                for item in items_to_update:
+                    target_path = os.path.join("data", "app", item)
+                    if os.path.exists(target_path):
+                        if os.path.isdir(target_path):
+                            shutil.rmtree(target_path)
+                        else:
+                            os.remove(target_path)
 
                 # 3. Очистка __pycache__ по всему проекту (всегда полезно)
                 for root, dirs, files in os.walk("."):
                     if "__pycache__" in dirs:
                         shutil.rmtree(os.path.join(root, "__pycache__"))
 
-                # 4. Распаковка архива
-                zip_ref.extractall(".")
+                # --- 4. Распаковка архива ---
+                # Вместо extractall("."), который падает на существующих папках в Windows
+                for member in zip_ref.infolist():
+                    # Если это папка, просто создаем её (exist_ok=True)
+                    if member.is_dir():
+                        os.makedirs(member.filename, exist_ok=True)
+                    else:
+                        # Если файл — извлекаем с перезаписью
+                        zip_ref.extract(member, ".")
+
                 logging.info(f"Extracted {len(file_list)} items")
 
-            # 5. Синхронизация с папкой пользователя '0'
-            # Теперь мы копируем только те приложения, которые обновились
-            if os.path.exists("data/app"):
-                for item in items_to_update:
-                    src = os.path.join("data/app", item)
-                    dst = os.path.join("data/0/app", item)
-                    if os.path.exists(src):
-                        if os.path.isdir(src):
-                            shutil.copytree(src, dst, dirs_exist_ok=True)
-                        else:
-                            shutil.copy2(src, dst)
+                # --- 5. Синхронизация (Безопасная для пользователя) ---
+                if os.path.exists("data/app"):
+                    for item in items_to_update:
+                        src = os.path.join("data/app", item)
+                        dst = os.path.join("data/0/app", item)
+                        
+                        if os.path.exists(src):
+                            if os.path.isdir(src):
+                                # Ключевой момент: используем dirs_exist_ok=True
+                                # Это позволит влить файлы обновления в папку приложения, 
+                                # не удаляя саму папку и не трогая другие файлы пользователя там.
+                                shutil.copytree(src, dst, dirs_exist_ok=True)
+                            else:
+                                shutil.copy2(src, dst)
                 
                 console.print("[dim]Синхронизация обновленных приложений завершена.[/dim]")
 
@@ -235,7 +244,7 @@ if __name__ == "__main__":
 
             # 3. Безопасность
             try:
-                from core.secury import sec_block
+                from core.secure import sec_block
                 logging.info("Executing security checks")
                 sec_block()
             except Exception as e:

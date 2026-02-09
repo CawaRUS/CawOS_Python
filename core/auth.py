@@ -1,5 +1,6 @@
 # core/auth.py — хранение и проверка root-настроек/пароля
-import os, json, hashlib, logging
+import os, json, hashlib, logging, secrets
+deadlock = True
 
 logger = logging.getLogger("auth")
 INFO_PATH = os.path.join("data", "json", "info.json")
@@ -42,27 +43,53 @@ def set_root_allowed(allowed: bool):
     data["allow_root"] = bool(allowed)
     save_settings(data)
 
-def has_root_password() -> bool:
-    data = load_settings()
-    return bool(data.get("root_password_hash"))
-
 def set_root_password(password: str):
-    logger.info("Setting new root password hash")
-    h = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    logger.info("Setting new root password hash with salt")
+    
+    # Генерируем случайную соль (16 байт вполне достаточно)
+    salt = secrets.token_hex(16)
+    
+    # Хешируем: соль + пароль
+    salted_pass = salt + password
+    h = hashlib.sha256(salted_pass.encode("utf-8")).hexdigest()
+    
+    # Сохраняем в формате salt$hash
+    stored_value = f"{salt}${h}"
+    
     data = load_settings()
-    data["root_password_hash"] = h
+    data["root_password_hash"] = stored_value
     save_settings(data)
 
 def verify_root_password(password: str) -> bool:
     data = load_settings()
-    stored = data.get("root_password_hash", "")
-    if not stored:
+    stored_data = data.get("root_password_hash", "")
+    
+    if not stored_data:
         logger.warning("Root password verification failed: no password set")
         return False
     
-    success = hashlib.sha256(password.encode("utf-8")).hexdigest() == stored
-    if success:
-        logger.info("Root password verified successfully")
-    else:
-        logger.warning("Root password ATTEMPT FAILED (Wrong password)")
-    return success
+    try:
+        # Разделяем сохраненную строку на соль и хеш
+        salt, stored_hash = stored_data.split("$")
+        
+        # Хешируем введенный пароль с той же солью
+        attempt_hash = hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+        
+        # Сравниваем через hmac.compare_digest для защиты от атак по времени (side-channel attacks)
+        import hmac
+        success = hmac.compare_digest(attempt_hash, stored_hash)
+        
+        if success:
+            logger.info("Root password verified successfully")
+        else:
+            logger.warning("Root password ATTEMPT FAILED (Wrong password)")
+        return success
+        
+    except ValueError:
+        # Если в конфиге старый пароль без соли (хеш без $)
+        logger.error("Stored password format is legacy or corrupted!")
+        return False
+
+def has_root_password() -> bool:
+    data = load_settings()
+    return bool(data.get("root_password_hash"))

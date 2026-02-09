@@ -1,5 +1,5 @@
 import core.fs.fs as fs
-import core.secury as secury
+import core.secure as secure
 
 about = "Удалить файл или папку"
 
@@ -10,7 +10,7 @@ def execute(args, kernel, console):
         
     target = args[0]
     
-    if not secury.confirm_delete(target, kernel.root_mode):
+    if not secure.confirm_delete(target, kernel.root_mode):
         return
         
     if fs.remove(target):

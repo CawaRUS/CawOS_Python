@@ -1,4 +1,5 @@
 # verify.py — Проверка целостности и статуса загрузчика
+deadlock = True
 import os
 import time
 import sys
@@ -24,7 +25,7 @@ except ImportError:
 REQUIRED_FILES = [
     'core/verify.py',
     'core/boot.py',
-    'core/secury.py',
+    'core/secure.py',
     'core/fs/fs.py',
     'core/shell.py',
     'core/auth.py',

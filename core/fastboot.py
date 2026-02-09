@@ -4,6 +4,7 @@ import shutil
 import logging
 from pathlib import Path
 from core import auth
+deadlock = True
 
 # Инициализация логгера
 logger = logging.getLogger("fastboot")
