@@ -1,0 +1,19 @@
+2026-02-13 00:02:04,882 [INFO] [logger] --- CawOS Logger Initialized (Fresh Session) ---
+2026-02-13 00:02:04,883 [INFO] [logger] Previous session log saved as system.old.log
+2026-02-13 00:02:04,884 [INFO] [main] --- CawOS Boot Process Started ---
+2026-02-13 00:02:05,079 [INFO] [main] Verifying system integrity...
+2026-02-13 00:02:05,080 [INFO] [verify] Starting system integrity check...
+2026-02-13 00:02:05,089 [INFO] [verify] Integrity check passed.
+2026-02-13 00:02:05,118 [ERROR] [main] Security module block!
+Traceback (most recent call last):
+  File "C:\CawOS\main.py", line 235, in <module>
+    from core.secure import sec_block
+  File "C:\CawOS\core\secure.py", line 19, in <module>
+    import core.fs.fs as fs
+  File "C:\CawOS\core\fs\fs.py", line 57
+    """Проверка: инициирован ли вызов системным кодом или системным приложением."""
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+IndentationError: expected an indented block after function definition on line 56
+2026-02-13 00:02:05,120 [ERROR] [main] Triggering Recovery. Reason: Security Module Error: expected an indented block after function definition on line 56 (fs.py, line 57) | Panic count: 1
+2026-02-13 00:02:05,339 [INFO] [main] Entering Recovery Menu...
+[RECOVERY] Entered recovery mode: Security Module Error: expected an indented block after function definition on line 56 (fs.py, line 57)

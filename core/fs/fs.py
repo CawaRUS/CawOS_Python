@@ -20,13 +20,20 @@ current_path = BASE_ROOT
 # --- ВНУТРЕННИЕ ХЕЛПЕРЫ ---
 
 def _is_trusted_caller():
-    """Проверка: инициирован ли вызов кодом из папки /core/."""
+    """Проверка: инициирован ли вызов системным кодом или системным приложением."""
     try:
         stack = inspect.stack()
         for frame in stack:
-            # Проверяем реальный путь файла в стеке
-            f_path = os.path.realpath(frame.filename)
+            f_path = os.path.normpath(os.path.realpath(frame.filename))
+            
+            # Доверяем всему, что в /core/
             if f_path.startswith(CORE_DIR):
+                return True
+            
+            # Доверяем системным приложениям из /data/app/
+            # (Обычные юзерские аппы лежат в /data/0/ или других папках)
+            sys_app_path = os.path.normpath(os.path.join(ROOT_LIMIT, "data", "app"))
+            if f_path.startswith(sys_app_path):
                 return True
         return False
     except:
@@ -40,22 +47,26 @@ def check_access(full_path):
     target = os.path.normpath(os.path.realpath(full_path))
     hard_limit = os.path.normpath(ROOT_LIMIT)
     
-    # ПЕРВАЯ ЛИНИЯ ОБОРОНЫ: Физический предел папки проекта
-    # Проверяем, не является ли целевой путь частью папки проекта
+    # 1. Физический предел папки проекта (Path Traversal protection)
     if not target.startswith(hard_limit):
         return False
 
-    # ВТОРАЯ ЛИНИЯ: Права внутри проекта
+    # 2. Root Mode
     if is_root_active():
-        return True # Root может всё, но только внутри CawOS
+        return True 
     
+    # 3. Доступ к пользовательской песочнице
     user_limit = os.path.normpath(BASE_ROOT)
     if target.startswith(user_limit):
         return True
         
+    # 4. Доступ для системных компонентов (доверенный код)
     if _is_trusted_caller():
-        sys_app_path = os.path.normpath(os.path.join(hard_limit, "data/app"))
-        if target.startswith(sys_app_path):
+        # Разрешаем системным модулям доступ к приложениям и конфигам
+        sys_app_path = os.path.normpath(os.path.join(hard_limit, "data", "app"))
+        sys_config_path = os.path.normpath(os.path.join(hard_limit, "data", "json"))
+        
+        if target.startswith(sys_app_path) or target.startswith(sys_config_path):
             return True
             
     return False
@@ -82,7 +93,6 @@ def get_full_path(path=None):
     return os.path.normpath(os.path.realpath(os.path.join(current_path, path)))
 
 def get_virtual_path(full_path=None):
-    """Для отображения в консоли: превращает системный путь в ~/ или [ROOT]."""
     target = os.path.realpath(full_path or current_path)
     if target.startswith(BASE_ROOT):
         rel = os.path.relpath(target, BASE_ROOT).replace("\\", "/")
@@ -95,13 +105,11 @@ def get_virtual_path(full_path=None):
 # --- ОПЕРАЦИИ ---
 
 def list_dir(path=None):
-    # Если вызов от системы и путь похож на системный (core/...)
     if _is_trusted_caller() and path and (path.startswith("core") or path.startswith("app")):
         full_path = os.path.normpath(os.path.join(ROOT_LIMIT, path))
     else:
         full_path = get_full_path(path)
 
-    # Проверка доступа для обычных смертных
     if not _is_trusted_caller() and not check_access(full_path):
         logger.warning(f"Access Denied: {full_path}")
         return []
@@ -110,7 +118,7 @@ def list_dir(path=None):
         if os.path.isdir(full_path):
             return os.listdir(full_path)
         return []
-    except Exception as e:
+    except:
         return []
 
 def change_dir(new_dir):
@@ -119,28 +127,22 @@ def change_dir(new_dir):
         current_path = ROOT_LIMIT if is_root_active() else BASE_ROOT
         return True
     
-    # Сначала генерируем потенциальный путь
     full_path = get_full_path(new_dir)
     
-    # ТЕПЕРЬ ПРОВЕРЯЕМ: 
-    # 1. Это папка?
-    # 2. check_access РАЗРЕШАЕТ туда идти? (Теперь проверка обязательна для всех)
     if os.path.isdir(full_path) and check_access(full_path):
         current_path = full_path
         return True
-    
-    # Если мы здесь, значит доступ запрещен или папки нет
     return False
 
 def read_file(path, bypass_security=False):
-    # Если это системная аппа, берем путь от корня проекта
-    if path.startswith("data/app"):
-        full_path = os.path.normpath(os.path.join(ROOT_LIMIT, path))
+    # Логика определения пути: для системных команд проверяем корень проекта
+    if (path.startswith("data/") or path.startswith("/data/")) and _is_trusted_caller():
+        clean_path = path.lstrip("/")
+        full_path = os.path.normpath(os.path.join(ROOT_LIMIT, clean_path))
     else:
         full_path = get_full_path(path)
 
-    # Страж теперь знает про системные аппы для доверенных лиц
-    if not check_access(full_path): 
+    if not (bypass_security and _is_trusted_caller()) and not check_access(full_path): 
         logger.warning(f"Read access denied: {full_path}")
         return None
 
@@ -152,10 +154,19 @@ def read_file(path, bypass_security=False):
         return None
 
 def write_file(path, content, bypass_security=False):
-    full_path = get_full_path(path)
-    if not check_access(full_path): return False
+    # Логика определения пути для системных нужд
+    if (path.startswith("data/") or path.startswith("/data/")) and _is_trusted_caller():
+        clean_path = path.lstrip("/")
+        full_path = os.path.normpath(os.path.join(ROOT_LIMIT, clean_path))
+    else:
+        full_path = get_full_path(path)
 
-    # Проверка прав через модуль secure (если есть)
+    # Проверка доступа
+    if not (bypass_security and _is_trusted_caller()) and not check_access(full_path):
+        logger.warning(f"Write Access Denied: {full_path}")
+        return False
+
+    # Дополнительная проверка через модуль secure (если есть)
     if not (bypass_security and _is_trusted_caller()):
         try:
             from core import secure
@@ -220,7 +231,6 @@ def get_network_info():
     return host, socket.gethostbyname(host)
 
 def make_dir(path):
-    """Создание папки с проверкой доступа."""
     full_path = get_full_path(path)
     if not check_access(full_path):
         return False
@@ -231,6 +241,5 @@ def make_dir(path):
         return False
 
 def raw_write(data):
-    """Прямая печать в терминал (нужна для управляющих ANSI-последовательностей)."""
     sys.stdout.write(data)
     sys.stdout.flush()

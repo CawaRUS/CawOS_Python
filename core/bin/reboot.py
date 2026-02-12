@@ -23,7 +23,7 @@ def execute(args, kernel, console):
 
     # Используем системный вызов fs.write_file
     # Он сам создаст директории, если нужно (os.makedirs внутри него уже есть)
-    if fs.write_file(boot_mode_path, boot_data):
+    if fs.write_file("data/json/boot_mode.json", boot_data, bypass_security=True):
         return "reboot"
     else:
         console.print("[bold red][ERROR][/bold red] Системная ошибка: доступ к boot_mode.json запрещен.")
