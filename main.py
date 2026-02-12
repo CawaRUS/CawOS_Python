@@ -90,61 +90,49 @@ def apply_updates():
 
             with zipfile.ZipFile(package_file, 'r') as zip_ref:
                 file_list = zip_ref.namelist()
+                
                 # 2. УМНАЯ ОЧИСТКА: только для системной папки!
-                items_to_update = set()
+                # Мы собираем имена объектов, которые БУДУТ обновлены в data/app
+                sys_items_to_update = set()
                 for f in file_list:
-                    for prefix in ["data/app/", "data/0/app/"]:
-                        if f.startswith(prefix):
-                            parts = f.split("/")
-                            idx = 2 if prefix == "data/app/" else 3
-                            if len(parts) > idx:
-                                items_to_update.add(parts[idx])
+                    if f.startswith("data/app/"):
+                        parts = f.split("/")
+                        if len(parts) > 2:
+                            sys_items_to_update.add(parts[2])
 
-                # Очищаем ТОЛЬКО временную системную папку data/app
-                # Папку data/0/app НЕ ТРОГАЕМ удалением, чтобы сохранить данные юзера
-                for item in items_to_update:
+                # Удаляем старые версии только в системной директории
+                for item in sys_items_to_update:
                     target_path = os.path.join("data", "app", item)
                     if os.path.exists(target_path):
+                        logging.debug(f"Clearing system app: {target_path}")
                         if os.path.isdir(target_path):
                             shutil.rmtree(target_path)
                         else:
                             os.remove(target_path)
 
-                # 3. Очистка __pycache__ по всему проекту (всегда полезно)
+                # 3. Очистка __pycache__ по всему проекту
                 for root, dirs, files in os.walk("."):
                     if "__pycache__" in dirs:
                         shutil.rmtree(os.path.join(root, "__pycache__"))
 
-                # --- 4. Распаковка архива ---
-                # Вместо extractall("."), который падает на существующих папках в Windows
+                # --- 4. РАСПАКОВКА АРХИВА ---
+                # zip_ref.extract разложит файлы по путям из архива:
+                # 'data/app/...' уйдет в системные, а 'data/0/app/...' — к пользователю.
                 for member in zip_ref.infolist():
-                    # Если это папка, просто создаем её (exist_ok=True)
                     if member.is_dir():
                         os.makedirs(member.filename, exist_ok=True)
                     else:
-                        # Если файл — извлекаем с перезаписью
                         zip_ref.extract(member, ".")
 
                 logging.info(f"Extracted {len(file_list)} items")
-
-                # --- 5. Синхронизация (Безопасная для пользователя) ---
-                if os.path.exists("data/app"):
-                    for item in items_to_update:
-                        src = os.path.join("data/app", item)
-                        dst = os.path.join("data/0/app", item)
-                        
-                        if os.path.exists(src):
-                            if os.path.isdir(src):
-                                # Ключевой момент: используем dirs_exist_ok=True
-                                # Это позволит влить файлы обновления в папку приложения, 
-                                # не удаляя саму папку и не трогая другие файлы пользователя там.
-                                shutil.copytree(src, dst, dirs_exist_ok=True)
-                            else:
-                                shutil.copy2(src, dst)
                 
-                console.print("[dim]Синхронизация обновленных приложений завершена.[/dim]")
+                # --- 5. СИНХРОНИЗАЦИЯ БОЛЬШЕ НЕ НУЖНА ---
+                # Так как extract уже положил всё на свои места. 
+                # Пользовательские данные в data/0/app, не упомянутые в архиве, остались целы.
+                
+                console.print("[dim]Обновление системных и пользовательских компонентов завершено.[/dim]")
 
-            # 6. Подчистка
+            # 6. Подчистка флагов
             os.remove(flag_file)
             os.remove(package_file)
             

@@ -32,8 +32,8 @@ about = "Запустить приложение (Системные или По
 
 def execute(args, kernel, console):
     # Пути теперь относительные для fs
-    sys_app_dir = "data/app"
-    user_app_dir = "data/0/app"
+    sys_app_dir = "/../app"
+    user_app_dir = "/app"
     
     if not args:
         apps = []
@@ -80,31 +80,64 @@ def execute(args, kernel, console):
             console.print("[red]Ошибка: не удалось прочитать файл приложения[/red]")
             return
             
-        # Подготовка безопасных builtins
-        if isinstance(__builtins__, dict): safe_builtins = __builtins__.copy()
-        else: safe_builtins = vars(__builtins__).copy()
+        # 1. Подготовка базовых безопасных builtins для ВСЕХ
+        if isinstance(__builtins__, dict): 
+            raw_builtins = __builtins__.copy()
+        else: 
+            raw_builtins = vars(__builtins__).copy()
 
-        if not is_system:
-            def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
-                allowed = ['math', 'json', 'random', 'datetime', 'rich', 're', 'time']
-                if name in allowed or name.startswith('rich'):
-                    return __import__(name, globals, locals, fromlist, level)
-                raise ImportError(f"Доступ к модулю '{name}' запрещен")
+        # Функция импорта с разным уровнем доступа
+        def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+            user_allowed = ['math', 'json', 'random', 'datetime', 'rich', 're', 'time', 'requests', 'hashlib']
+            system_allowed = user_allowed + ['hashlib', 'base64', 'itertools', 'data.info']
+            allowed = system_allowed if is_system else user_allowed
+            
+            if name in allowed or name.startswith('rich'):
+                return __import__(name, globals, locals, fromlist, level)
+            raise ImportError(f"Доступ к модулю '{name}' запрещен в целях безопасности CawOS")
 
-            safe_builtins.update({"print": app_os["print"], "__import__": restricted_import})
-            for func in ["open", "eval", "exec", "compile", "globals", "locals"]:
-                safe_builtins.pop(func, None)
+        # БЕЗОПАСНЫЙ EVAL: проксирует вызов, не давая выйти из песочницы
+        def safe_eval(expr, globals_dict=None, locals_dict=None):
+            # Если приложение вызывает eval, мы принудительно ограничиваем его контекст встроенных функций
+            # Чтобы через eval нельзя было вызвать __import__ или open
+            return eval(expr, {"__builtins__": {}}, locals_dict)
 
-        # Формируем глобальное окружение
+        # Список разрешенных встроенных имен (типы, ошибки, базовые функции)
+        allowed_names = [
+            'abs', 'bool', 'dict', 'float', 'int', 'len', 'list', 'max', 'min', 
+            'range', 'round', 'str', 'sum', 'tuple', 'type', 'pow', 'divmod',
+            'ValueError', 'TypeError', 'IndexError', 'KeyError', 'StopIteration'
+        ]
+        
+        safe_builtins = {}
+        for name in allowed_names:
+            if name in raw_builtins:
+                safe_builtins[name] = raw_builtins[name]
+
+        # Добавляем наши кастомные обертки
+        safe_builtins.update({
+            "print": app_os["print"], 
+            "__import__": restricted_import,
+            "eval": safe_eval
+        })
+
+        # 2. Формируем финальное глобальное окружение
         exec_globals = {
-            "__builtins__": safe_builtins if not is_system else __builtins__,
+            "__builtins__": safe_builtins,
             "app_os": app_os,
-            "console": console, "Panel": Panel, "Table": Table
+            "console": console, 
+            "Panel": Panel, 
+            "Table": Table
         }
         
-        # Если системное, даем доступ к fs вместо os
+        # 3. Добавляем системные возможности, если нужно
         if is_system:
-            exec_globals.update({"fs": fs, "auth": auth, "Prompt": Prompt, "Confirm": Confirm})
+            exec_globals.update({
+                "fs": fs, 
+                "auth": auth, 
+                "Prompt": Prompt, 
+                "Confirm": Confirm
+            })
 
         # --- ТОЧКА ЗАПУСКА ---
         compiled_code = compile(code, f"app:{app_name}", "exec")

@@ -1,0 +1,7 @@
+{
+    "verify_enabled": false,
+    "secury_enabled": false,
+    "allow_root": true,
+    "oem_unlock": true,
+    "root_password_hash": "3bec1b19fe0c399483e1cff146fd6157$314b5ac893b335bea171c84f2817caa52f95f821cdbd14f349cef692d5d10f2b"
+}

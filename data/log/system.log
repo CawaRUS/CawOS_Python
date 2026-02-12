@@ -1,0 +1,157 @@
+2026-02-12 23:43:58,467 [INFO] [logger] --- CawOS Logger Initialized (Fresh Session) ---
+2026-02-12 23:43:58,467 [INFO] [logger] Previous session log saved as system.old.log
+2026-02-12 23:43:58,468 [INFO] [main] --- CawOS Boot Process Started ---
+2026-02-12 23:43:58,645 [INFO] [main] Verifying system integrity...
+2026-02-12 23:43:58,645 [INFO] [verify] Starting system integrity check...
+2026-02-12 23:43:58,654 [WARNING] [verify] SYSTEM INTEGRITY CHECK IS DISABLED
+2026-02-12 23:43:58,668 [INFO] [main] Executing security checks
+2026-02-12 23:43:58,668 [INFO] [secure] Running security boot check (sec_block)
+2026-02-12 23:43:58,668 [WARNING] [secure] Security module is DISABLED in settings
+2026-02-12 23:43:58,672 [INFO] [main] Calling bootloader
+2026-02-12 23:43:58,672 [INFO] [boot] Initializing Bootloader...
+2026-02-12 23:43:58,674 [INFO] [boot] Multi-OS boot capability: False
+2026-02-12 23:43:58,675 [INFO] [boot] Bootloader passing control to: CawOS
+2026-02-12 23:43:58,675 [INFO] [main] Selected OS: CawOS
+2026-02-12 23:43:58,675 [INFO] [main] Importing kernel: core.os.CawOS.kernel
+2026-02-12 23:43:58,760 [INFO] [kernel] Kernel initialized for CawOS
+2026-02-12 23:43:58,760 [INFO] [main] Kernel instance created. Panic count reset.
+2026-02-12 23:43:58,760 [INFO] [kernel] Kernel execution started
+2026-02-12 23:43:58,761 [INFO] [kernel] System subsystems check: OK
+2026-02-12 23:43:58,761 [INFO] [kernel] Transferring control to Shell...
+2026-02-12 23:43:58,762 [INFO] [shell] Shell session started
+2026-02-12 23:43:58,762 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:44:00,998 [INFO] [shell] Command entered: run with args: ['update']
+2026-02-12 23:44:01,016 [INFO] [run] Launching SYSTEM app: 'update'
+2026-02-12 23:44:02,397 [INFO] [run] App 'update' finished successfully
+2026-02-12 23:44:02,398 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:44:06,581 [INFO] [shell] Command entered: run with args: ['check_root']
+2026-02-12 23:44:06,584 [INFO] [run] Launching USER app: 'check_root'
+2026-02-12 23:44:06,585 [INFO] [api] Status check started by user app
+2026-02-12 23:44:06,588 [INFO] [api] Status check finished successfully
+2026-02-12 23:44:06,589 [INFO] [run] App 'check_root' finished successfully
+2026-02-12 23:44:06,590 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:47,262 [INFO] [shell] Command entered: tts with args: []
+2026-02-12 23:48:47,262 [WARNING] [shell] Unknown command: tts
+2026-02-12 23:48:47,264 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:47,750 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,110 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,622 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,653 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,683 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,715 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,747 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,776 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,809 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,855 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,887 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,919 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,949 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:48,980 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,010 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,041 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,086 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,118 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,149 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,181 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,210 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,241 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,272 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,318 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,349 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,380 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,413 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,443 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,474 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,506 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,537 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,569 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,617 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,647 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,678 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,710 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,742 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,771 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,804 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,839 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,864 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,914 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,945 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:49,972 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,002 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,036 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,063 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,110 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,141 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,172 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,202 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,233 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,264 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,295 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,326 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,372 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,403 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,436 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,465 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,497 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,528 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,558 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,604 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,636 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,667 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,698 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,731 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:50,759 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:51,848 [INFO] [shell] Command entered: clear with args: []
+2026-02-12 23:48:51,850 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:48:53,230 [INFO] [shell] Command entered: help with args: []
+2026-02-12 23:48:53,298 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:51:04,158 [INFO] [shell] Command entered: run with args: []
+2026-02-12 23:51:04,175 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:51:09,775 [INFO] [shell] Command entered: run with args: ['exploit']
+2026-02-12 23:51:09,778 [INFO] [run] Launching USER app: 'exploit'
+2026-02-12 23:51:09,789 [INFO] [run] App 'exploit' finished successfully
+2026-02-12 23:51:09,790 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:52:11,136 [INFO] [shell] Command entered: run with args: ['exploit']
+2026-02-12 23:52:11,139 [INFO] [run] Launching SYSTEM app: 'exploit'
+2026-02-12 23:52:11,142 [INFO] [run] App 'exploit' finished successfully
+2026-02-12 23:52:11,143 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:52:51,341 [INFO] [shell] Command entered: exploit with args: []
+2026-02-12 23:52:51,342 [WARNING] [shell] Unknown command: exploit
+2026-02-12 23:52:51,345 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:52:58,855 [INFO] [shell] Command entered: exploit with args: []
+2026-02-12 23:52:58,856 [ERROR] [shell] Exception during command execution
+Traceback (most recent call last):
+  File "C:\CawOS\core\shell.py", line 179, in run
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "C:\CawOS\core\bin\exploit.py", line 5, in <module>
+    app_os["print"] = fake_print
+    ^^^^^^
+NameError: name 'app_os' is not defined
+2026-02-12 23:52:58,919 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\0\\data\\json\\info.json'
+2026-02-12 23:53:18,487 [INFO] [shell] Command entered: exploit with args: []
+2026-02-12 23:53:26,128 [WARNING] [main] User sent KeyboardInterrupt
+2026-02-12 23:53:26,152 [ERROR] [main] Triggering Recovery. Reason: User Interruption (Ctrl+C) | Panic count: 1
+2026-02-12 23:53:26,155 [INFO] [main] Entering Recovery Menu...
+[RECOVERY] Entered recovery mode: User Interruption (Ctrl+C)
+[RECOVERY] User requested reboot
+2026-02-12 23:53:27,936 [INFO] [main] Recovery action: reboot
+2026-02-12 23:53:27,950 [INFO] [main] Verifying system integrity...
+2026-02-12 23:53:27,950 [INFO] [verify] Starting system integrity check...
+2026-02-12 23:53:27,951 [WARNING] [verify] SYSTEM INTEGRITY CHECK IS DISABLED
+2026-02-12 23:53:27,952 [INFO] [main] Executing security checks
+2026-02-12 23:53:27,952 [INFO] [secure] Running security boot check (sec_block)
+2026-02-12 23:53:27,952 [WARNING] [secure] Security module is DISABLED in settings
+2026-02-12 23:53:27,953 [INFO] [main] Calling bootloader
+2026-02-12 23:53:27,954 [INFO] [boot] Initializing Bootloader...
+2026-02-12 23:53:27,955 [INFO] [boot] Multi-OS boot capability: False
+2026-02-12 23:53:27,956 [INFO] [boot] Bootloader passing control to: CawOS
+2026-02-12 23:53:27,958 [INFO] [main] Selected OS: CawOS
+2026-02-12 23:53:27,958 [INFO] [main] Importing kernel: core.os.CawOS.kernel
+2026-02-12 23:53:27,959 [INFO] [kernel] Kernel initialized for CawOS
+2026-02-12 23:53:27,959 [INFO] [main] Kernel instance created. Panic count reset.
+2026-02-12 23:53:27,960 [INFO] [kernel] Kernel execution started
+2026-02-12 23:53:27,960 [INFO] [kernel] System subsystems check: OK
+2026-02-12 23:53:27,961 [INFO] [kernel] Transferring control to Shell...
+2026-02-12 23:53:27,961 [INFO] [shell] Shell session started

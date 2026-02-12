@@ -1,21 +1,8 @@
-deadlock = True
-import os
-import json
-import getpass
-import time
-import logging
-from datetime import datetime
+# Мы импортируем только то, что в белом списке (math, datetime)
+import datetime
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich import print as rprint
-
-from core import auth
-
-logger = logging.getLogger("setting")
-
-console = Console()
+# Глобальные переменные: console, Panel, Table, Prompt, auth, fs, app_os
+# уже доступны в exec_globals, если приложение системное!
 
 def get_status_style(value: bool) -> str:
     return "[bold green]ВКЛ[/]" if value else "[bold red]ВЫКЛ[/]"
@@ -26,9 +13,14 @@ def show_menu(info):
     table.add_column("Опция", style="white")
     table.add_column("Статус / Значение", justify="right")
 
-    table.add_row("1", "Текущее время", datetime.now().strftime('%H:%M:%S'))
+    # Используем время из SDK или datetime
+    table.add_row("1", "Текущее время", datetime.datetime.now().strftime('%H:%M:%S'))
     table.add_row("2", "Имя пользователя", f"[yellow]{info.get('username', 'user')}[/]")
-    table.add_row("3", "Список приложений", f"{len(os.listdir('data/app')) if os.path.exists('data/app') else 0} шт.")
+    
+    # Работаем через FS драйвер вместо os.listdir
+    apps_count = len(fs.list_dir("/app")) if fs.exists("/app") else 0
+    table.add_row("3", "Список приложений", f"{apps_count} шт.")
+    
     table.add_row("4", "Проверка целостности", get_status_style(info.get("verify_enabled", True)))
     table.add_row("5", "Модуль безопасности", get_status_style(info.get("secury_enabled", True)))
     table.add_row("6", "Доступ к ROOT", "[bold yellow]ОГРАНИЧЕНО[/]" if not info.get("oem_unlock") else get_status_style(info.get("allow_root")))
@@ -41,103 +33,83 @@ def show_menu(info):
     console.print(table)
 
 # Основной цикл
-logger.info("Settings menu opened")
+app_os["log"]("Settings menu opened")
+
 while True:
-    # Обновляем данные из файла каждый раз, чтобы видеть изменения других модулей
     info = auth.load_settings() 
     show_menu(info)
     
-    choice = console.input("[bold cyan]Введите номер опции > [/]").strip()
+    choice = Prompt.ask("[bold cyan]Введите номер опции[/]").strip()
 
     if choice == "1":
-        rprint(f"[bold green]Дата и время:[/] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        console.print(f"[bold green]Дата и время:[/] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     elif choice == "2":
-        new_name = input("Введите новое имя пользователя: ").strip()
+        new_name = Prompt.ask("Введите новое имя пользователя").strip()
         if new_name:
             old_name = info.get('username', 'user')
             info["username"] = new_name
             auth.save_settings(info)
-            logger.info(f"Username changed from '{old_name}' to '{new_name}'")
-            rprint(f"[green]✔ Имя изменено на {new_name}[/]")
+            app_os["log"](f"Username changed: {old_name} -> {new_name}")
+            console.print(f"[green]✔ Имя изменено на {new_name}[/]")
 
     elif choice == "3":
-        apps_path = "data/app"
-        if os.path.exists(apps_path):
-            rprint(Panel("\n".join([f"{a[:-3]}" for a in os.listdir(apps_path) if a.endswith(".py")]), title="Установленное ПО"))
+        if fs.exists("/app"):
+            apps = [f[:-3] for f in fs.list_dir("/app") if f.endswith(".py")]
+            console.print(Panel("\n".join(apps), title="Установленное ПО"))
         else:
-            logger.error("Failed to list apps: directory not found")
-            rprint("[red]Ошибка: Папка приложений не найдена[/]")
+            console.print("[red]Ошибка: Папка приложений не найдена[/]")
 
     elif choice in ["4", "5", "8"]:
-        # Групповая обработка простых переключателей
         keys = {"4": "verify_enabled", "5": "secury_enabled", "8": "multi_os_boot"}
         key = keys[choice]
         info[key] = not info.get(key, True)
         auth.save_settings(info)
-        logger.info(f"System setting '{key}' set to {info[key]}")
-        rprint(f"[yellow]Параметр {key} изменен.[/]")
+        console.print(f"[yellow]Параметр {key} изменен.[/]")
 
     elif choice == "6":
         if not info.get("oem_unlock", False):
-            logger.warning("Attempted to toggle ROOT while OEM is locked")
-            rprint("[bold red]КРИТИЧЕСКАЯ ОШИБКА: OEM заблокирован. ROOT невозможен.[/]")
+            console.print("[bold red]КРИТИЧЕСКАЯ ОШИБКА: OEM заблокирован.[/]")
         else:
             new_val = not auth.is_root_allowed()
             auth.set_root_allowed(new_val)
-            logger.info(f"ROOT access toggle: {new_val}")
-            rprint(f"Статус ROOT: {get_status_style(new_val)}")
+            console.print(f"Статус ROOT: {get_status_style(new_val)}")
 
     elif choice == "7":
+        # Используем Prompt с password=True вместо getpass
         if auth.has_root_password():
-            old_p = getpass.getpass("Введите текущий пароль ROOT: ")
+            old_p = Prompt.ask("Введите текущий пароль ROOT", password=True)
             if not auth.verify_root_password(old_p):
-                logger.warning("ROOT password change failed: incorrect current password")
-                rprint("[bold red]ОШИБКА: Доступ запрещен. Неверный пароль![/]")
-                time.sleep(1)
+                console.print("[bold red]ОШИБКА: Неверный пароль![/]")
                 continue
         
-        rprint("[blue]Режим смены пароля активирован.[/]")
-        p1 = getpass.getpass("Новый пароль: ")
-        if not p1:
-            rprint("[red]Отмена: Пароль не может быть пустым.[/]")
-            continue
-            
-        p2 = getpass.getpass("Повторите пароль: ")
-        
-        if p1 == p2:
-            auth.set_root_password(p1)
-            logger.info("ROOT password successfully updated")
-            rprint("[bold green]Пароль ROOT успешно обновлён и хэширован.[/]")
-        else:
-            logger.warning("ROOT password change failed: passwords mismatch")
-            rprint("[bold red]Ошибка: Пароли не совпадают.[/]")
+        p1 = Prompt.ask("Новый пароль", password=True)
+        if p1:
+            p2 = Prompt.ask("Повторите пароль", password=True)
+            if p1 == p2:
+                auth.set_root_password(p1)
+                console.print("[bold green]Пароль ROOT успешно обновлён.[/]")
+            else:
+                console.print("[bold red]Ошибка: Пароли не совпадают.[/]")
 
     elif choice == "9":
         colors = ["cyan", "magenta", "yellow", "green", "red", "white", "blue"]
-        rprint(f"[bold]Доступные цвета:[/] {', '.join(colors)}")
-        new_color = input("Введите цвет: ").strip().lower()
+        console.print(f"[bold]Доступные цвета:[/] {', '.join(colors)}")
+        new_color = Prompt.ask("Введите цвет").strip().lower()
         if new_color in colors:
             info["color"] = new_color
             auth.save_settings(info)
-            logger.info(f"UI color changed to {new_color}")
-            rprint(f"[green]✔ Цвет изменен на {new_color}[/]")
-        else:
-            rprint("[red]Ошибка: Цвет не поддерживается.[/]")
+            console.print(f"[green]✔ Цвет изменен на {new_color}[/]")
 
     elif choice == "10":
-        new_os_name = input("Введите новое название системы: ").strip()
+        new_os_name = Prompt.ask("Введите новое название системы").strip()
         if new_os_name:
-            old_os = info.get('name_os', 'CawOS')
             info["name_os"] = new_os_name
             auth.save_settings(info)
-            logger.info(f"System name changed from '{old_os}' to '{new_os_name}'")
-            rprint(f"[green]✔ Система переименована в {new_os_name}[/]")
+            console.print(f"[green]✔ Система переименована в {new_os_name}[/]")
 
     elif choice == "0":
-        logger.info("Settings menu closed")
-        rprint("[bold yellow]Завершение сеанса настроек...[/]")
         break
     
-    input("Нажмите Enter чтобы продолжить...")
-    os.system('cls' if os.name == 'nt' else 'clear')
+    Prompt.ask("\nНажмите Enter чтобы продолжить")
+    console.clear()

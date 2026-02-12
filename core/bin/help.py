@@ -1,43 +1,51 @@
 import json
 import core.fs.fs as fs
 from rich.table import Table
+from rich.markup import escape # Защита от [red] в описаниях
 
-about = "Показать список доступных команд и пакетов (с пагинацией)"
+about = "Показать список доступных команд и пакетов"
 
 def execute(args, kernel, console):
     ITEMS_PER_PAGE = 8
     try:
         page = int(args[0]) if args else 1
         page = max(1, page)
-    except ValueError:
+    except (ValueError, IndexError):
         page = 1
 
-    bin_path = fs.join_paths(fs.root_limit, "core", "bin")
+    bin_rel_path = "core/bin"
+    all_raw_entries = fs.list_dir(bin_rel_path)
     all_entries = []
-    if fs.exists(bin_path):
-        for entry in fs.list_dir(bin_path):
-            full_path = fs.join_paths(bin_path, entry)
+
+    if all_raw_entries:
+        for entry in all_raw_entries:
+            item_path = fs.join_paths(bin_rel_path, entry)
             
-            # 1. Обработка системных команд (.py файлов)
+            # 1. Системные команды
             if entry.endswith(".py") and entry != "__init__.py":
                 cmd_name = entry[:-3]
-                # Вызываем наш новый безопасный метод
-                desc = fs.get_command_about(full_path)
+                
+                # Попробуем прочитать напрямую через fs.read_file, 
+                # если get_command_about капризничает
+                desc = fs.get_command_about(item_path) 
+                
+                # Если desc всё еще "Ошибка чтения", значит fs.py блокирует доступ
                 all_entries.append((cmd_name, desc, "Core"))
             
-            # 2. Обработка пакетов (папок)
-            elif fs.is_dir(full_path) and not entry.startswith(('.', '__')):
-                json_path = fs.join_paths(full_path, "about.json")
+            # 2. Пакеты
+            elif fs.is_dir(item_path) and not entry.startswith(('.', '__')):
+                json_path = fs.join_paths(item_path, "about.json")
                 pack_about = "Краткое описание отсутствует"
                 
                 if fs.exists(json_path):
-                    try:
-                        # Тут используем обычный open, так как fs разрешает чтение данных
-                        with open(json_path, "r", encoding="utf-8") as f:
-                            data = json.load(f)
+                    content = fs.read_file(json_path)
+                    if content:
+                        try:
+                            data = json.loads(content)
                             pack_about = data.get("about", data.get("description", pack_about))
-                    except:
-                        pack_about = "[red]Ошибка JSON[/red]"
+                        except:
+                            pack_about = "[red]Ошибка JSON[/red]"
+                
                 all_entries.append((entry, pack_about, "Package"))
 
     all_entries.sort(key=lambda x: x[0])
@@ -59,6 +67,6 @@ def execute(args, kernel, console):
     table.add_column("Тип", style="green")
 
     for name, desc, c_type in page_items:
-        table.add_row(name, desc, c_type)
+        table.add_row(escape(name), escape(desc), c_type)
 
     console.print(table)

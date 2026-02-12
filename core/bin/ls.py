@@ -1,59 +1,64 @@
 import core.fs.fs as fs
 from rich.table import Table
+from rich.markup import escape # Импортируем щит от "мясорубки"
 
 about = "Показать содержимое каталога"
 
 def execute(args, kernel, console):
-    # Если аргументы есть — берем первый как путь, иначе — текущий каталог
-    target_path_raw = args[0] if args else None
+    # 1. Получаем путь. Если args нет, берем текущий рабочий каталог из FS
+    # (Предположим, у fs есть метод get_cwd_virtual или аналогичный)
+    target_path_raw = args[0] if args else "" 
     
-    # Получаем полный путь через драйвер ФС (он сам проверит песочницу и root)
-    full_path = fs.get_full_path(target_path_raw)
-    
-    # Проверяем доступ через твой главный страж
-    if not fs.check_access(full_path):
-        console.print(f"[red]Доступ запрещен:[/] {target_path_raw or 'текущий каталог'}")
-        return
-
-    # Проверяем через fs (чтобы не нарушать Sandbox)
+    # Проверяем доступ
     if not fs.exists(target_path_raw):
-        console.print(f"[red]Ошибка:[/] Путь [yellow]{target_path_raw}[/yellow] не найден.")
+        console.print(f"[red]Ошибка:[/] Путь [yellow]{escape(target_path_raw)}[/yellow] не найден.")
         return
+    
     if not fs.is_dir(target_path_raw):
-        console.print(f"[red]Ошибка:[/] [yellow]{target_path_raw}[/yellow] не является папкой.")
+        console.print(f"[red]Ошибка:[/] [yellow]{escape(target_path_raw)}[/yellow] не является папкой.")
         return
 
-    # Создаем таблицу. Для заголовка используем виртуальный путь
-    display_path = target_path_raw if target_path_raw else (
-        "~/" if not fs.is_root_active() else "/"
-    )
+    # 2. ДИНАМИЧЕСКИЙ ЗАГОЛОВОК
+    # Вместо гадания, берем реальный виртуальный путь, который видит система
+    current_display_path = fs.get_virtual_path(target_path_raw)
     
-    table = Table(title=f"Содержимое [green]{display_path}[/green]")
+    table = Table(title=f"Содержимое [green]{escape(current_display_path)}[/green]")
     table.add_column("Имя", style="bright_cyan")
     table.add_column("Тип", style="yellow")
     table.add_column("Размер", style="dim")
 
     try:
-        # Передаем путь в list_dir
         items = fs.list_dir(target_path_raw)
         
         for item in items:
-            # Строим путь для проверки каждого элемента через API
-            item_path = fs.join_paths(target_path_raw or "", item)
+            item_path = fs.join_paths(target_path_raw, item)
+            
+            # Важно: сначала проверяем тип, потом экранируем для вывода
             is_dir = fs.is_dir(item_path)
             
-            # Добавим отображение размера для файлов через fs.get_size
             size = ""
             if not is_dir:
-                size_bytes = fs.get_size(item_path)
-                size = f"{size_bytes} B" if size_bytes < 1024 else f"{round(size_bytes/1024, 1)} KB"
+                try:
+                    size_bytes = fs.get_size(item_path)
+                    if size_bytes < 1024:
+                        size = f"{size_bytes} B"
+                    elif size_bytes < 1024**2:
+                        size = f"{round(size_bytes/1024, 1)} KB"
+                    else:
+                        size = f"{round(size_bytes/(1024**2), 1)} MB"
+                except:
+                    size = "???"
 
+            # 3. ФИКС HANO-ЭФФЕКТА: Экранируем имя файла перед добавлением в таблицу
+            safe_item_name = escape(item) 
+            
             table.add_row(
-                item, 
+                safe_item_name, 
                 "[blue]Папка[/blue]" if is_dir else "Файл",
                 size
             )
             
         console.print(table)
     except Exception as e:
-        console.print(f"[red]Ошибка при чтении каталога: {e}[/red]")
+        # Экранируем даже текст ошибки на всякий случай
+        console.print(f"[red]Ошибка при чтении каталога: {escape(str(e))}[/red]")

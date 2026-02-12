@@ -117,6 +117,18 @@ def confirm_delete(path, is_root):
         console.print("[green]Действие отменено.[/green]")
         return False
 
+def can_write_file(path, is_root):
+    # Если ты Root, тебе можно писать везде (в пределах ROOT_LIMIT, что уже проверил fs.py)
+    if is_root:
+        return True
+    
+    # Список запрещенных для обычного юзера расширений или системных папок
+    protected_extensions = ['.py', '.json', '.bat']
+    if any(path.endswith(ext) for ext in protected_extensions):
+        return False
+        
+    return True
+
 def can_read_file(path, is_root=False):
     """
     Интеллектуальная проверка протокола DEADLOCK.
