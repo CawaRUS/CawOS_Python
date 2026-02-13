@@ -1,9 +1,8 @@
 import math
+import ast
 from rich.markup import escape 
 
-# Удалены: os, sys, Console, Panel, Table, Prompt (они уже в глобальном окружении)
-# Удален sys.set_int_max_str_digits (это должна контролировать ОС)
-# Удален console = Console() (используем готовый объект console)
+# Глобальные объекты (Table, Panel, Prompt, console) проброшены из run.py
 
 def show_help():
     table = Table(title="Справка калькулятора", title_style="bold magenta")
@@ -18,27 +17,56 @@ def show_help():
     
     console.print(table)
 
-def is_safe(expr):
-    """Проверка выражения на запрещенные символы интроспекции."""
-    forbidden = ['.', '[', ']', '_', '__']
-    for char in forbidden:
-        if char in expr:
-            return False, char
-    return True, None
+def is_expression_safe(expr):
+    """
+    Усиленная проверка через AST (Фикс Бага №14).
+    Разрешает математику, но блокирует доступ к атрибутам и методам Python.
+    """
+    try:
+        tree = ast.parse(expr, mode='eval')
+        for node in ast.walk(tree):
+            allowed_nodes = (
+                ast.Expression, ast.BinOp, ast.UnaryOp, 
+                ast.Num, ast.Constant, ast.Call, 
+                ast.Name, ast.Load,
+                ast.Add, ast.Sub, ast.Mult, ast.Div, 
+                ast.Pow, ast.Mod, ast.FloorDiv,
+                ast.USub, ast.UAdd
+            )
+            
+            if not isinstance(node, allowed_nodes):
+                return False, f"Запрещенная структура: {type(node).__name__}"
+            
+            if isinstance(node, ast.Call):
+                # Разрешаем вызов только простых имен: sqrt(), но не ().__class__()
+                if not isinstance(node.func, ast.Name):
+                    return False, "Вызов методов объектов запрещен"
+                    
+        return True, None
+    except Exception as e:
+        return False, f"Ошибка синтаксиса: {e}"
 
 def calc():
+    # Набор разрешенных имен (контекст выполнения)
+    # Хардкодим PI и E, чтобы они точно были доступны как числа
     safe_dict = {
-        "abs": abs, "round": round, "pow": pow,
-        "sin": math.sin, "cos": math.cos, "tan": math.tan,
-        "sqrt": math.sqrt, "pi": math.pi, "e": math.e,
-        "log": math.log
+        "abs": abs, 
+        "round": round, 
+        "pow": pow,
+        "sin": math.sin, 
+        "cos": math.cos, 
+        "tan": math.tan,
+        "sqrt": math.sqrt, 
+        "log": math.log,
+        "pi": 3.141592653589793, 
+        "e": 2.718281828459045
     }
 
     history = []
 
     console.print(Panel.fit(
-        "[bold green]Калькулятор[/]\n"
-        "[dim]Введите [bold white]help[/] для списка функций или [bold red]exit[/] для выхода[/]",
+        "[bold green]CawOS Safe Calculator[/]\n"
+        "[dim]Защита на уровне AST активна. Константы pi и e захардкожены.[/]",
         border_style="magenta"
     ))
 
@@ -58,23 +86,27 @@ def calc():
                 continue
 
             if len(expr) > 100:
-                console.print("[bold red]❌ Ошибка:[/] Выражение слишком длинное.")
+                console.print("[bold red]❌ Ошибка:[/] Слишком длинный ввод.")
                 continue
 
-            safe, char = is_safe(expr)
+            # 1. AST-фильтрация
+            safe, error_reason = is_expression_safe(expr)
             if not safe:
-                console.print(f"[bold red]❌ Уязвимость:[/] Использование '{char}' запрещено в целях безопасности.")
+                console.print(f"[bold red]❌ Безопасность:[/] {error_reason}")
                 continue
 
-            if "**" in expr:
-                base, exp = expr.split("**", 1)
-                try:
-                    if float(eval(exp, {"__builtins__": None}, safe_dict)) > 10000:
-                        console.print("[bold red]❌ Ошибка:[/] Слишком большая степень.")
-                        continue
-                except: pass
+            # 2. Защита от DoS (цепочки степеней)
+            if "**" in expr and expr.count("**") > 1:
+                console.print("[bold red]❌ Ошибка:[/] Слишком сложная цепочка степеней.")
+                continue
 
-            result = eval(expr, {"__builtins__": None}, safe_dict)
+            # 3. Выполнение
+            # Используем один словарь и для globals, и для locals.
+            # Это гарантирует, что eval увидит pi и e в любой среде.
+            context = {"__builtins__": {}}
+            context.update(safe_dict)
+            
+            result = eval(expr, context)
             safe_result = escape(str(result))
             
             history.append((escape(expr), safe_result))
@@ -82,14 +114,14 @@ def calc():
 
             console.print(f"[bold white]Результат:[/] [bold green]{safe_result}[/]")
 
-        except (MemoryError, OverflowError):
-            console.print("[bold red]❌ Ошибка:[/] Вычисление слишком тяжелое.")
-        except SyntaxError:
-            console.print("[bold red]❌ Ошибка синтаксиса:[/] Проверьте выражение.")
-        except NameError:
-            console.print("[bold red]❌ Ошибка:[/] Использованы запрещенные функции.")
         except ZeroDivisionError:
             console.print("[bold red]❌ Ошибка:[/] Деление на ноль.")
+        except (MemoryError, OverflowError):
+            console.print("[bold red]❌ Ошибка:[/] Число слишком велико.")
+        except NameError:
+            console.print(f"[bold red]❌ Ошибка:[/] Неизвестная функция или переменная.")
+        except SyntaxError:
+             console.print(f"[bold red]❌ Ошибка:[/] Некорректный синтаксис выражения.")
         except Exception as e:
             error_msg = str(e) if str(e) else e.__class__.__name__
             console.print(f"[bold red]❌ Ошибка:[/] [yellow]{escape(error_msg)}[/]")

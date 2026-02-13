@@ -7,7 +7,7 @@ import json
 # Глобальные объекты console, Panel, Table, Prompt, Progress, fs, app_os 
 # уже проброшены через exec_globals в run.py
 
-VERSION_URL = "http://cawas.duckdns.org/version.json"
+VERSION_URL = "https://cawas.duckdns.org/version.json"
 
 def calculate_sha256(file_path):
     """Вычисляет SHA-256 хеш файла через драйвер fs."""

@@ -79,34 +79,43 @@ def load_user_info():
 
 def is_command_safe(command_path):
     """
-    Анализирует код команды перед запуском.
-    Разрешает всё для системных команд в core/bin.
+    Усиленный AST-анализ (Баг №8). 
+    С разделением прав: системным командам доверяем больше.
     """
-    # Если команда лежит в системной папке core/bin, доверяем ей без проверок
-    normalized_path = command_path.replace("\\", "/")
-    if "core/bin" in normalized_path:
-        return True, None
-
     try:
+        # Нормализуем путь для проверки
+        normalized_path = os.path.normpath(command_path)
+        is_system_cmd = "core" + os.sep + "bin" in normalized_path
+
         with open(command_path, "r", encoding="utf-8") as f:
             code = f.read()
         
         tree = ast.parse(code)
-        forbidden = ['os', 'shutil', 'subprocess', 'sys', 'pathlib', 'socket']
+        
+        # Модули, которые нельзя импортировать НИКОМУ (кроме ядра)
+        forbidden_modules = {'os', 'shutil', 'subprocess', 'sys', 'pathlib', 'socket'}
+        
+        # Имена, которые запрещены только пользовательским скриптам
+        # Системным командам (типа run.py) они нужны для работы
+        dangerous_names = {'__import__', 'eval', 'exec', 'getattr', 'setattr', 'globals', 'locals'}
         
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name.split('.')[0] in forbidden:
-                        return False, alias.name
+            # 1. Проверка импортов
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                mod = node.names[0].name if isinstance(node, ast.Import) else node.module
+                if mod and mod.split('.')[0] in forbidden_modules:
+                    return False, f"import {mod}"
             
-            if isinstance(node, ast.ImportFrom):
-                if node.module and node.module.split('.')[0] in forbidden:
-                    return False, node.module
-                    
+            # 2. Проверка имен (eval, getattr и т.д.)
+            if isinstance(node, ast.Name):
+                if node.id in dangerous_names:
+                    # Если это НЕ системная команда — блокируем
+                    if not is_system_cmd:
+                        return False, f"использование '{node.id}'"
+
         return True, None
     except Exception as e:
-        return False, f"Ошибка анализа кода: {e}"
+        return False, f"Ошибка анализа: {e}"
 
 def run(kernel_instance):
     """Основной цикл оболочки."""

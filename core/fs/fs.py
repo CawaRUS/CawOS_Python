@@ -109,7 +109,7 @@ def get_virtual_path(full_path=None):
 # --- ОПЕРАЦИИ ---
 
 def list_dir(path=None):
-    if _is_trusted_caller() and path and (path.startswith("core") or path.startswith("app")):
+    if _is_trusted_caller() and path and (path.startswith("core") or path.startswith("app") or path.startswith("data")):
         full_path = os.path.normpath(os.path.join(ROOT_LIMIT, path))
     else:
         full_path = get_full_path(path)
