@@ -26,12 +26,17 @@ class KernelProxy:
     def is_root(self):
         return self._kernel.is_root
 
+    # Добавьте это свойство:
+    @property
+    def root_mode(self):
+        # Проверяем наличие атрибута у ядра на всякий случай
+        return getattr(self._kernel, 'root_mode', False)
+
     @property
     def running(self):
         return self._kernel.running
 
     def get_cwd(self):
-        # Если у тебя путь хранится в fs, берем оттуда
         return fs.current_path
 
 try:
