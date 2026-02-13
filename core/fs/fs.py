@@ -5,6 +5,7 @@ import logging
 import sys
 import socket
 
+
 # Ссылка на ядро
 kernel = None 
 logger = logging.getLogger("fs")
@@ -13,6 +14,9 @@ logger = logging.getLogger("fs")
 BASE_ROOT = os.path.realpath(os.path.join(os.getcwd(), "data", "0"))
 ROOT_LIMIT = os.path.realpath(os.getcwd())
 CORE_DIR = os.path.join(ROOT_LIMIT, "core")
+
+base_root = BASE_ROOT
+root_limit = ROOT_LIMIT
 
 # Состояние
 current_path = BASE_ROOT
@@ -243,3 +247,24 @@ def make_dir(path):
 def raw_write(data):
     sys.stdout.write(data)
     sys.stdout.flush()
+
+def walk(top_path):
+    """
+    Безопасная обертка над os.walk.
+    Проверяет доступ к каждой директории перед итерацией.
+    """
+    full_root = get_full_path(top_path)
+    
+    for root, dirs, files in os.walk(full_root):
+        # Фильтруем папки на лету: оставляем только те, куда есть доступ
+        dirs[:] = [d for d in dirs if check_access(os.path.join(root, d))]
+        
+        # Проверяем доступ к текущему root (на всякий случай)
+        if check_access(root):
+            yield root, dirs, files
+
+def get_relpath(path, start=None):
+    """Обертка над os.path.relpath для find.py"""
+    if start is None:
+        start = BASE_ROOT
+    return os.path.relpath(path, start).replace("\\", "/")

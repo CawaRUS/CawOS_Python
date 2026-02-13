@@ -1,77 +1,46 @@
-2026-02-13 00:07:39,107 [INFO] [logger] --- CawOS Logger Initialized (Fresh Session) ---
-2026-02-13 00:07:39,107 [INFO] [main] --- CawOS Boot Process Started ---
-2026-02-13 00:07:39,283 [INFO] [main] Verifying system integrity...
-2026-02-13 00:07:39,283 [INFO] [verify] Starting system integrity check...
-2026-02-13 00:07:39,293 [INFO] [verify] Integrity check passed.
-2026-02-13 00:07:39,303 [INFO] [main] Executing security checks
-2026-02-13 00:07:39,303 [INFO] [secure] Running security boot check (sec_block)
-2026-02-13 00:07:39,308 [INFO] [main] Calling bootloader
-2026-02-13 00:07:39,308 [INFO] [boot] Initializing Bootloader...
-2026-02-13 00:07:39,311 [INFO] [boot] Multi-OS boot capability: False
-2026-02-13 00:07:39,312 [INFO] [boot] Bootloader passing control to: CawOS
-2026-02-13 00:07:39,313 [INFO] [main] Selected OS: CawOS
-2026-02-13 00:07:39,313 [INFO] [main] Importing kernel: core.os.CawOS.kernel
-2026-02-13 00:07:39,394 [INFO] [kernel] Kernel initialized for CawOS
-2026-02-13 00:07:39,394 [INFO] [main] Kernel instance created. Panic count reset.
-2026-02-13 00:07:39,396 [INFO] [kernel] Kernel execution started
-2026-02-13 00:07:39,396 [INFO] [kernel] System subsystems check: OK
-2026-02-13 00:07:39,397 [INFO] [kernel] Transferring control to Shell...
-2026-02-13 00:07:39,397 [INFO] [shell] Shell session started
-2026-02-13 00:07:39,497 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
-2026-02-13 00:07:42,667 [INFO] [shell] Command entered: run with args: ['update']
-2026-02-13 00:07:42,684 [INFO] [run] Launching SYSTEM app: 'update'
-2026-02-13 00:07:44,817 [INFO] [run] App 'update' finished successfully
-2026-02-13 00:07:44,821 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
-2026-02-13 00:08:43,841 [INFO] [shell] Command entered: reboot with args: []
-2026-02-13 00:08:43,900 [INFO] [shell] Command 'reboot' requested system state: reboot
-2026-02-13 00:08:43,900 [INFO] [kernel] Shell exited with code: reboot
-2026-02-13 00:08:43,900 [INFO] [kernel] Shutdown sequence initiated
-2026-02-13 00:08:44,402 [INFO] [kernel] Kernel halted.
-2026-02-13 00:08:44,402 [INFO] [main] Kernel terminated. Exit code: reboot
-2026-02-13 00:08:45,417 [INFO] [main] Verifying system integrity...
-2026-02-13 00:08:45,418 [INFO] [verify] Starting system integrity check...
-2026-02-13 00:08:45,418 [INFO] [verify] Integrity check passed.
-2026-02-13 00:08:45,419 [INFO] [main] Executing security checks
-2026-02-13 00:08:45,419 [INFO] [secure] Running security boot check (sec_block)
-2026-02-13 00:08:45,420 [INFO] [main] Calling bootloader
-2026-02-13 00:08:45,420 [INFO] [boot] Initializing Bootloader...
-2026-02-13 00:08:45,421 [INFO] [boot] Multi-OS boot capability: False
-2026-02-13 00:08:45,423 [INFO] [boot] Bootloader passing control to: CawOS
-2026-02-13 00:08:45,424 [INFO] [main] Selected OS: CawOS
-2026-02-13 00:08:45,424 [INFO] [main] Importing kernel: core.os.CawOS.kernel
-2026-02-13 00:08:45,426 [INFO] [kernel] Kernel initialized for CawOS
-2026-02-13 00:08:45,426 [INFO] [main] Kernel instance created. Panic count reset.
-2026-02-13 00:08:45,426 [INFO] [kernel] Kernel execution started
-2026-02-13 00:08:45,427 [INFO] [kernel] System subsystems check: OK
-2026-02-13 00:08:45,427 [INFO] [kernel] Transferring control to Shell...
-2026-02-13 00:08:45,427 [INFO] [shell] Shell session started
-2026-02-13 00:08:45,431 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
-2026-02-13 00:08:51,680 [INFO] [shell] Command entered: reboot with args: ['fastboot']
-2026-02-13 00:08:51,688 [INFO] [shell] Command 'reboot' requested system state: reboot
-2026-02-13 00:08:51,688 [INFO] [kernel] Shell exited with code: reboot
-2026-02-13 00:08:51,688 [INFO] [kernel] Shutdown sequence initiated
-2026-02-13 00:08:52,190 [INFO] [kernel] Kernel halted.
-2026-02-13 00:08:52,190 [INFO] [main] Kernel terminated. Exit code: reboot
-2026-02-13 00:08:53,208 [INFO] [main] System boot mode: fastboot. Resetting panic counter.
-2026-02-13 00:08:53,208 [INFO] [main] Setting system boot mode to: normal
-2026-02-13 00:08:53,211 [INFO] [main] Launching Fastboot interface
-2026-02-13 00:08:53,211 [INFO] [fastboot] Fastboot mode started
-2026-02-13 00:09:01,929 [INFO] [fastboot] Rebooting to normal via Fastboot
-2026-02-13 00:09:01,946 [INFO] [main] Verifying system integrity...
-2026-02-13 00:09:01,946 [INFO] [verify] Starting system integrity check...
-2026-02-13 00:09:01,947 [INFO] [verify] Integrity check passed.
-2026-02-13 00:09:01,947 [INFO] [main] Executing security checks
-2026-02-13 00:09:01,947 [INFO] [secure] Running security boot check (sec_block)
-2026-02-13 00:09:01,948 [INFO] [main] Calling bootloader
-2026-02-13 00:09:01,948 [INFO] [boot] Initializing Bootloader...
-2026-02-13 00:09:01,949 [INFO] [boot] Multi-OS boot capability: False
-2026-02-13 00:09:01,951 [INFO] [boot] Bootloader passing control to: CawOS
-2026-02-13 00:09:01,951 [INFO] [main] Selected OS: CawOS
-2026-02-13 00:09:01,951 [INFO] [main] Importing kernel: core.os.CawOS.kernel
-2026-02-13 00:09:01,953 [INFO] [kernel] Kernel initialized for CawOS
-2026-02-13 00:09:01,953 [INFO] [main] Kernel instance created. Panic count reset.
-2026-02-13 00:09:01,953 [INFO] [kernel] Kernel execution started
-2026-02-13 00:09:01,954 [INFO] [kernel] System subsystems check: OK
-2026-02-13 00:09:01,954 [INFO] [kernel] Transferring control to Shell...
-2026-02-13 00:09:01,954 [INFO] [shell] Shell session started
-2026-02-13 00:09:01,959 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
+2026-02-13 21:25:06,498 [INFO] [logger] --- CawOS Logger Initialized (Fresh Session) ---
+2026-02-13 21:25:06,498 [INFO] [logger] Previous session log saved as system.old.log
+2026-02-13 21:25:06,499 [INFO] [main] --- CawOS Boot Process Started ---
+2026-02-13 21:25:06,666 [INFO] [main] Verifying system integrity...
+2026-02-13 21:25:06,666 [INFO] [verify] Starting system integrity check...
+2026-02-13 21:25:06,674 [INFO] [verify] Integrity check passed.
+2026-02-13 21:25:06,697 [INFO] [main] Executing security checks
+2026-02-13 21:25:06,698 [INFO] [secure] Running security boot check (sec_block)
+2026-02-13 21:25:06,700 [WARNING] [secure] Unclean shutdown detected! Triggering Emergency Mode.
+2026-02-13 21:25:07,616 [INFO] [secure] User chose to continue boot after unclean shutdown
+2026-02-13 21:25:07,632 [INFO] [main] Calling bootloader
+2026-02-13 21:25:07,632 [INFO] [boot] Initializing Bootloader...
+2026-02-13 21:25:07,635 [INFO] [boot] Multi-OS boot capability: False
+2026-02-13 21:25:07,636 [INFO] [boot] Bootloader passing control to: CawOS
+2026-02-13 21:25:07,636 [INFO] [main] Selected OS: CawOS
+2026-02-13 21:25:07,636 [INFO] [main] Importing kernel: core.os.CawOS.kernel
+2026-02-13 21:25:07,717 [INFO] [kernel] Kernel initialized for CawOS
+2026-02-13 21:25:07,717 [INFO] [main] Kernel instance created. Panic count reset.
+2026-02-13 21:25:07,718 [INFO] [kernel] Kernel execution started
+2026-02-13 21:25:07,719 [INFO] [kernel] System subsystems check: OK
+2026-02-13 21:25:07,719 [INFO] [kernel] Transferring control to Shell...
+2026-02-13 21:25:07,719 [INFO] [shell] Shell session started
+2026-02-13 21:25:07,815 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
+2026-02-13 21:25:09,829 [INFO] [shell] Command entered: find with args: ['app']
+2026-02-13 21:25:09,842 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
+2026-02-13 21:25:14,277 [INFO] [shell] Command entered: find with args: ['core']
+2026-02-13 21:25:14,288 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
+2026-02-13 21:25:16,982 [INFO] [shell] Command entered: root with args: []
+2026-02-13 21:25:16,987 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
+2026-02-13 21:25:27,173 [INFO] [shell] Command entered: run with args: ['setting']
+2026-02-13 21:25:27,178 [INFO] [run] Launching SYSTEM app: 'setting'
+2026-02-13 21:25:27,183 [INFO] [api] Settings menu opened
+2026-02-13 21:25:49,414 [INFO] [auth] Changing allow_root to: True
+2026-02-13 21:25:51,173 [INFO] [run] App 'setting' finished successfully
+2026-02-13 21:25:52,420 [INFO] [shell] Command entered: root with args: []
+2026-02-13 21:25:54,469 [INFO] [auth] Setting new root password hash with salt
+2026-02-13 21:25:56,541 [INFO] [auth] Root password verified successfully
+2026-02-13 21:25:56,542 [ERROR] [shell] Exception during command execution
+Traceback (most recent call last):
+  File "C:\CawOS\core\shell.py", line 192, in run
+    result = module.execute(args, safe_kernel, console)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\CawOS\core\bin\root.py", line 30, in execute
+    kernel.root_mode = True
+    ^^^^^^^^^^^^^^^^
+AttributeError: property 'root_mode' of 'KernelProxy' object has no setter

@@ -1,27 +1,47 @@
-2026-02-13 20:45:42,351 [INFO] [logger] --- CawOS Logger Initialized (Fresh Session) ---
-2026-02-13 20:45:42,353 [INFO] [logger] Previous session log saved as system.old.log
-2026-02-13 20:45:42,353 [INFO] [main] --- CawOS Boot Process Started ---
-2026-02-13 20:45:42,592 [INFO] [main] Verifying system integrity...
-2026-02-13 20:45:42,592 [INFO] [verify] Starting system integrity check...
-2026-02-13 20:45:42,606 [INFO] [verify] Integrity check passed.
-2026-02-13 20:45:42,617 [INFO] [main] Executing security checks
-2026-02-13 20:45:42,617 [INFO] [secure] Running security boot check (sec_block)
-2026-02-13 20:45:42,626 [INFO] [main] Calling bootloader
-2026-02-13 20:45:42,626 [INFO] [boot] Initializing Bootloader...
-2026-02-13 20:45:42,630 [INFO] [boot] Multi-OS boot capability: False
-2026-02-13 20:45:42,632 [INFO] [boot] Bootloader passing control to: CawOS
-2026-02-13 20:45:42,632 [INFO] [main] Selected OS: CawOS
-2026-02-13 20:45:42,632 [INFO] [main] Importing kernel: core.os.CawOS.kernel
-2026-02-13 20:45:42,739 [INFO] [kernel] Kernel initialized for CawOS
-2026-02-13 20:45:42,739 [INFO] [main] Kernel instance created. Panic count reset.
-2026-02-13 20:45:42,740 [INFO] [kernel] Kernel execution started
-2026-02-13 20:45:42,740 [INFO] [kernel] System subsystems check: OK
-2026-02-13 20:45:42,740 [INFO] [kernel] Transferring control to Shell...
-2026-02-13 20:45:42,741 [INFO] [shell] Shell session started
-2026-02-13 20:45:42,839 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
-2026-02-13 20:45:44,955 [INFO] [shell] Command entered: ls with args: []
-2026-02-13 20:45:44,974 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
-2026-02-13 20:45:49,402 [INFO] [shell] Command entered: rename with args: ['app', 'apps']
-2026-02-13 20:45:49,412 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
-2026-02-13 20:45:50,355 [INFO] [shell] Command entered: ls with args: []
-2026-02-13 20:45:50,372 [ERROR] [fs] IO Error: [Errno 2] No such file or directory: 'C:\\CawOS\\data\\json\\info.json'
+2026-02-13 21:32:05,385 [INFO] [logger] --- CawOS Logger Initialized (Fresh Session) ---
+2026-02-13 21:32:05,385 [INFO] [logger] Previous session log saved as system.old.log
+2026-02-13 21:32:05,385 [INFO] [main] --- CawOS Boot Process Started ---
+2026-02-13 21:32:05,558 [INFO] [main] Verifying system integrity...
+2026-02-13 21:32:05,559 [INFO] [verify] Starting system integrity check...
+2026-02-13 21:32:05,567 [WARNING] [verify] SYSTEM INTEGRITY CHECK IS DISABLED
+2026-02-13 21:32:05,580 [INFO] [main] Executing security checks
+2026-02-13 21:32:05,580 [INFO] [secure] Running security boot check (sec_block)
+2026-02-13 21:32:05,581 [WARNING] [secure] Security module is DISABLED in settings
+2026-02-13 21:32:05,583 [INFO] [main] Calling bootloader
+2026-02-13 21:32:05,584 [INFO] [boot] Initializing Bootloader...
+2026-02-13 21:32:05,584 [INFO] [boot] Multi-OS boot capability: False
+2026-02-13 21:32:05,586 [INFO] [boot] Bootloader passing control to: CawOS
+2026-02-13 21:32:05,586 [INFO] [main] Selected OS: CawOS
+2026-02-13 21:32:05,587 [INFO] [main] Importing kernel: core.os.CawOS.kernel
+2026-02-13 21:32:05,683 [INFO] [kernel] Kernel initialized for CawOS
+2026-02-13 21:32:05,683 [INFO] [main] Kernel instance created. Panic count reset.
+2026-02-13 21:32:05,683 [INFO] [kernel] Kernel execution started
+2026-02-13 21:32:05,683 [INFO] [kernel] System subsystems check: OK
+2026-02-13 21:32:05,683 [INFO] [kernel] Transferring control to Shell...
+2026-02-13 21:32:05,684 [INFO] [shell] Shell session started
+2026-02-13 21:32:09,470 [INFO] [shell] Command entered: root with args: []
+2026-02-13 21:32:10,695 [INFO] [auth] Root password verified successfully
+2026-02-13 21:32:14,303 [INFO] [shell] Command entered: cd with args: ['..']
+2026-02-13 21:32:16,557 [INFO] [shell] Command entered: cd with args: ['..']
+2026-02-13 21:32:17,373 [INFO] [shell] Command entered: cd with args: ['..']
+2026-02-13 21:32:21,134 [INFO] [shell] Command entered: cd with args: ['data']
+2026-02-13 21:32:22,430 [INFO] [shell] Command entered: cd with args: ['0']
+2026-02-13 21:32:24,213 [INFO] [shell] Command entered: ls with args: []
+2026-02-13 21:32:28,390 [INFO] [shell] Command entered: find with args: ['core']
+2026-02-13 21:32:31,573 [INFO] [shell] Command entered: root with args: ['off']
+2026-02-13 21:32:35,093 [INFO] [shell] Command entered: find with args: ['core']
+2026-02-13 21:34:04,933 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:06,333 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:07,558 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:08,630 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:09,461 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:11,318 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:12,783 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:13,646 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:30,334 [INFO] [shell] Command entered: авав with args: []
+2026-02-13 21:34:30,334 [WARNING] [shell] Unknown command: авав
+2026-02-13 21:34:31,006 [INFO] [shell] Command entered: выащлыфа with args: []
+2026-02-13 21:34:31,007 [WARNING] [shell] Unknown command: выащлыфа
+2026-02-13 21:34:32,367 [INFO] [shell] Command entered: clear with args: []
+2026-02-13 21:34:33,862 [INFO] [shell] Command entered: зыаэжац with args: []
+2026-02-13 21:34:33,862 [WARNING] [shell] Unknown command: зыаэжац

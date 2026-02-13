@@ -29,8 +29,23 @@ class KernelProxy:
     # Добавьте это свойство:
     @property
     def root_mode(self):
-        # Проверяем наличие атрибута у ядра на всякий случай
-        return getattr(self._kernel, 'root_mode', False)
+        return self._kernel.root_mode
+    
+    @root_mode.setter
+    def root_mode(self, value):
+        # Проверяем стек вызовов
+        import inspect
+        frame = inspect.stack()[1]
+        caller_path = os.path.normpath(frame.filename)
+        
+        # Разрешаем менять root_mode ТОЛЬКО скрипту root.py в системной папке
+        trusted_command = os.path.normpath(os.path.join(os.getcwd(), "core", "bin", "root.py"))
+        
+        if caller_path == trusted_command:
+            self._kernel.root_mode = value
+        else:
+            # Можно бросить исключение или просто игнорировать
+            raise PermissionError(f"Command {caller_path} is not authorized to change root mode.")
 
     @property
     def running(self):
